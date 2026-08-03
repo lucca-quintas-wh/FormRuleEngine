@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · Rótulo e opções — Form Rule Engine</title>
+<link rel="stylesheet" href="assets/demo.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html">← Índice</a>
+    <span class="sep">/</span>
+    <span>04 · Rótulo e opções</span>
+    <span class="spacer"></span>
+    <a href="05-valores-calculados.html">Próximo →</a>
+  </div>
+
+  <h1><code>data-label-when</code> · <code>data-options-when</code></h1>
+  <p class="lead">
+    Dois plugins que trocam o <em>conteúdo</em> de um campo em vez do estado dele: o
+    texto do rótulo e o conjunto de <code>&lt;option&gt;</code>. Ambos usam um formato
+    de "lista de regras": a primeira que casar vence.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <form data-form-visibility="true" name="formRotulos">
+
+    <h2>1. Rótulo condicional</h2>
+    <p>
+      A regra é um <strong>array</strong>: cada item é uma condição normal, mais a
+      chave <code>label</code> com o texto. A avaliação é sequencial e para no
+      primeiro acerto — ordem importa, e a condição mais específica vem primeiro.
+    </p>
+
+    <div class="warn">
+      <p>
+        O plugin acha o rótulo com
+        <code>element.querySelector('.ilu-form-label')</code>. Sem essa classe no
+        <code>&lt;label&gt;</code>, nada acontece. E, como os demais plugins de campo,
+        o atributo vai no <strong>wrapper</strong>, não no input.
+      </p>
+    </div>
+
+    <template data-src="HTML" data-open>
+      <label for="TipoDoc">Tipo de documento</label>
+      <select name="TipoDoc" id="TipoDoc">
+        <option value="F">Pessoa física</option>
+        <option value="J">Pessoa jurídica</option>
+        <option value="E">Estrangeiro</option>
+      </select>
+
+      <div data-label-when='[
+             {"TipoDoc":"F","label":"CPF"},
+             {"TipoDoc":"J","label":"CNPJ"},
+             {"TipoDoc":"E","label":"Passaporte"}
+           ]'>
+        <label class="ilu-form-label" for="Documento" data-label-default="Documento">Documento</label>
+        <input name="Documento" id="Documento">
+      </div>
+      <p class="hint">
+        <code>data-label-default</code> é o texto de volta quando nenhuma regra casa.
+        Sem ele, o rótulo simplesmente fica com o último valor aplicado.
+      </p>
+    </template>
+
+    <h2>2. Rótulo com condição composta</h2>
+    <p>
+      Dentro de cada item da lista cabe a DSL inteira, inclusive
+      <code>AND</code>/<code>OR</code>. O extrator de dependências sabe ignorar a
+      chave <code>label</code> ao descobrir de quais campos a regra depende.
+    </p>
+
+    <template data-src="HTML">
+      <div class="row">
+        <div>
+          <label for="Pais">País</label>
+          <select name="Pais" id="Pais">
+            <option value="BR">Brasil</option>
+            <option value="US">Estados Unidos</option>
+          </select>
+        </div>
+        <div>
+          <label for="Perfil">Perfil</label>
+          <select name="Perfil" id="Perfil">
+            <option value="PF">Pessoa física</option>
+            <option value="PJ">Empresa</option>
+          </select>
+        </div>
+      </div>
+
+      <div data-label-when='[
+             {"AND":[{"Pais":"BR"},{"Perfil":"PJ"}],"label":"CNPJ"},
+             {"AND":[{"Pais":"BR"},{"Perfil":"PF"}],"label":"CPF"},
+             {"Pais":"US","label":"Taxpayer ID (EIN/SSN)"}
+           ]'>
+        <label class="ilu-form-label" for="IdFiscal" data-label-default="Identificação fiscal">Identificação fiscal</label>
+        <input name="IdFiscal" id="IdFiscal">
+      </div>
+    </template>
+
+    <h2>3. Opções dependentes de outro campo</h2>
+    <p>
+      Formato mais direto do <code>options_when</code>:
+      <code>depends_on</code> aponta o campo pai, e <code>options</code> é um
+      dicionário <em>valor do pai → conjunto de opções</em>. As opções são um mapa
+      <code>valor: rótulo</code>.
+    </p>
+
+    <template data-src="HTML">
+      <label for="Categoria">Categoria</label>
+      <select name="Categoria" id="Categoria">
+        <option value="">Selecione…</option>
+        <option value="veiculo">Veículo</option>
+        <option value="imovel">Imóvel</option>
+        <option value="vida">Vida</option>
+      </select>
+
+      <div data-options-when='{
+             "depends_on":"Categoria",
+             "options":{
+               "veiculo":{"auto":"Automóvel","moto":"Motocicleta","frota":"Frota"},
+               "imovel":{"residencial":"Residencial","comercial":"Comercial"},
+               "vida":{"individual":"Individual","coletivo":"Coletivo"}
+             }
+           }'>
+        <label for="Subcategoria">Subcategoria</label>
+        <select name="Subcategoria" id="Subcategoria" data-placeholder=".:Escolha:.">
+          <option value="">.:Escolha:.</option>
+        </select>
+      </div>
+      <p class="hint">
+        <code>data-placeholder</code> no <code>&lt;select&gt;</code> faz o plugin
+        recriar a opção vazia no topo a cada reconstrução. Sem ele, o combo já nasce
+        com a primeira opção real selecionada.
+      </p>
+    </template>
+
+    <h2>4. Opções por condição</h2>
+    <p>
+      O segundo formato é um array, igual ao do <code>label_when</code>: cada item tem
+      uma condição (qualquer uma da DSL) e a chave <code>options</code>. Serve quando o
+      conjunto de opções não depende de um campo só.
+    </p>
+
+    <template data-src="HTML">
+      <div class="row">
+        <div>
+          <label for="Uf">UF</label>
+          <select name="Uf" id="Uf">
+            <option value="SP">SP</option>
+            <option value="RJ">RJ</option>
+          </select>
+        </div>
+        <div>
+          <label for="Porte">Porte</label>
+          <select name="Porte" id="Porte">
+            <option value="pequeno">Pequeno</option>
+            <option value="grande">Grande</option>
+          </select>
+        </div>
+      </div>
+
+      <div data-options-when='[
+             {"AND":[{"Uf":"SP"},{"Porte":"grande"}],
+              "options":{"lr":"Lucro real","lp":"Lucro presumido"}},
+             {"Porte":"pequeno",
+              "options":{"sn":"Simples Nacional","mei":"MEI"}}
+           ]'>
+        <label for="Regime">Regime tributário</label>
+        <select name="Regime" id="Regime" data-placeholder=".:Escolha:.">
+          <option value="">.:Escolha:.</option>
+          <option value="lr">Lucro real</option>
+          <option value="lp">Lucro presumido</option>
+          <option value="sn">Simples Nacional</option>
+        </select>
+      </div>
+      <p class="hint">
+        Quando <strong>nenhuma</strong> regra casa (RJ + grande), o plugin restaura as
+        opções originais do HTML — ele fotografa a lista inicial na primeira execução.
+      </p>
+    </template>
+
+    <h2>5. O que o plugin faz e o que ele não faz</h2>
+    <ul>
+      <li>Preserva o valor selecionado se ele ainda existir na lista nova; senão, cai na primeira opção.</li>
+      <li>Dispara <code>change</code> no select depois de reconstruir — então regras que dependem dele reavaliam sozinhas, e cascatas encadeiam.</li>
+      <li>Guarda as opções originais para restaurar; a "foto" é tirada na primeira avaliação, o que significa que opções injetadas por AJAX <em>depois</em> não entram nela.</li>
+      <li><strong>É estático:</strong> todo o conjunto de opções está no atributo HTML. Para opções vindas do servidor, o plugin é o <code>fetch_when</code> com <code>map_options</code> — veja a <a href="08-fetch-cascata.html">página 08</a>.</li>
+    </ul>
+
+    <div class="tip">
+      <p>
+        <strong>Qual usar?</strong> <code>options_when</code> para conjuntos pequenos e
+        conhecidos em tempo de renderização (subcategorias, regimes, motivos).
+        <code>fetch_when</code> + <code>map_options</code> quando a lista mora no banco
+        ou é grande demais para embutir no HTML.
+      </p>
+    </div>
+
+  </form>
+
+  <div class="panels">
+    <div data-demo-log></div>
+    <div data-demo-state></div>
+  </div>
+
+</div>
+
+<script src="assets/demo.js"></script>
+
+<script src="../src/form-rule-engine.js"></script>
+<script src="../src/plugins/form-rule-base.js"></script>
+<script src="../src/plugins/form-rule-label.js"></script>
+<script src="../src/plugins/form-rule-options.js"></script>
+<script src="../src/form-visibility-v2.js"></script>
+
+<script>
+  Demo.state('form[name="formRotulos"]');
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.querySelector('form[name="formRotulos"]');
+    form.addEventListener('change', function (e) {
+      Demo.log(e.target.name + ' = "' + e.target.value + '"');
+    });
+  });
+</script>
+</body>
+</html>

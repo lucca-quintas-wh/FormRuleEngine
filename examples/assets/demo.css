@@ -1,0 +1,281 @@
+/* ---------------------------------------------------------------------------
+   Estilos compartilhados pelos exemplos.
+   Nada aqui é exigido pela engine — é só para os exemplos ficarem legíveis.
+   As classes que a ENGINE usa de fato estão no bloco "contrato visual" no fim.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1c1f24;
+  --muted: #6b7280;
+  --line: #e3e6ea;
+  --accent: #2f6fed;
+  --accent-soft: #eef3fe;
+  --ok: #17803d;
+  --warn: #b45309;
+  --err: #c92a2a;
+  --code-bg: #f6f7f9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  margin: 0;
+  padding: 0 20px 80px;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; }
+
+/* ── cabeçalho / navegação ─────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+  margin-bottom: 28px;
+  font-size: 13px;
+}
+.topbar a { color: var(--accent); text-decoration: none; }
+.topbar a:hover { text-decoration: underline; }
+.topbar .sep { color: var(--line); }
+.topbar .spacer { flex: 1; }
+
+h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 18px; margin: 40px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+h3 { font-size: 15px; margin: 22px 0 4px; }
+p.lead { color: var(--muted); margin-top: 0; font-size: 15px; }
+
+.deps {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-bottom: 4px;
+}
+.deps strong { color: var(--fg); font-weight: 600; }
+
+/* ── caixas de nota ────────────────────────────────────────────────────── */
+
+.note, .warn, .tip {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+  margin: 14px 0;
+  font-size: 14px;
+}
+.warn { border-color: var(--err); background: #fdf0f0; }
+.tip  { border-color: var(--ok);  background: #eef8f1; }
+.note p:first-child, .warn p:first-child, .tip p:first-child { margin-top: 0; }
+.note p:last-child,  .warn p:last-child,  .tip p:last-child  { margin-bottom: 0; }
+
+/* ── código ────────────────────────────────────────────────────────────── */
+
+code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 10px 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+details.demo-code {
+  margin: 8px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+details.demo-code > summary {
+  cursor: pointer;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  user-select: none;
+}
+details.demo-code > summary:hover { color: var(--fg); }
+details.demo-code[open] > summary { border-bottom: 1px solid var(--line); }
+details.demo-code pre { margin: 0; border: 0; border-radius: 0 0 8px 8px; background: var(--code-bg); }
+
+/* ── área viva do exemplo ──────────────────────────────────────────────── */
+
+.demo-live {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px 18px;
+  background: #fff;
+}
+
+label, .demo-live > label { display: block; margin: 12px 0 4px; font-weight: 500; font-size: 13px; }
+input, select, textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font: inherit;
+  background: #fff;
+  color: inherit;
+}
+input[type="checkbox"], input[type="radio"] { width: auto; }
+input:disabled, select:disabled, textarea:disabled { background: #f3f4f6; color: #9aa0a6; }
+button {
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+button.secondary { background: #fff; color: var(--accent); }
+button[disabled] { opacity: .5; cursor: not-allowed; }
+
+fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+legend { font-weight: 600; padding: 0 6px; font-size: 13px; }
+.hint { color: var(--muted); font-size: 12px; margin: 3px 0 0; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row > * { flex: 1 1 180px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 12px 0; }
+th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; }
+th { background: var(--code-bg); font-weight: 600; }
+td code, th code { font-size: 12px; }
+.table-scroll { overflow-x: auto; }
+
+/* ── painéis auxiliares (log e estado) ─────────────────────────────────── */
+
+.panels { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+.panel {
+  flex: 1 1 260px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  font-size: 12.5px;
+}
+.panel h4 {
+  margin: 0;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.panel .body {
+  padding: 8px 12px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.panel .body div { padding: 1px 0; }
+.panel .body .t { color: var(--muted); }
+.state-row { display: flex; justify-content: space-between; gap: 10px; }
+.state-row .k { color: var(--muted); }
+.state-row .v { color: var(--fg); word-break: break-all; text-align: right; }
+.state-row .v.empty { color: #c0c4c9; }
+
+/* ── índice ────────────────────────────────────────────────────────────── */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin: 16px 0 0; }
+.card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  background: #fff;
+}
+.card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.card .n { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+.card .t { font-weight: 600; display: block; margin: 2px 0 4px; }
+.card .d { font-size: 12.5px; color: var(--muted); }
+.card .attrs { margin-top: 6px; font-size: 11px; color: var(--accent); font-family: ui-monospace, monospace; }
+
+/* ---------------------------------------------------------------------------
+   Contrato visual: classes/atributos que a ENGINE realmente manipula.
+   Copie este bloco para o seu projeto (ou mapeie para o seu design system).
+   --------------------------------------------------------------------------- */
+
+.form-rule-hidden { display: none; }                 /* visible / action */
+.ilu-form-field--disabled { opacity: .6; }           /* disabled */
+.form-rule-locked { opacity: .7; }                   /* lock */
+.form-rule-invalid { border-color: var(--err) !important; }  /* validate / remote-validate */
+.form-rule-prevent-submit-error { outline: 2px solid var(--err); }
+.ilu-form-label--required::after { content: " *"; color: var(--err); }
+.form-step-hidden { display: none; }                 /* step */
+
+/* step: stepper e navegação renderizados pelo plugin */
+.step-stepper { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.step-stepper-item {
+  display: flex; align-items: center; gap: 7px;
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  border-radius: 999px; padding: 4px 12px 4px 5px; font-size: 12.5px; cursor: pointer;
+}
+.step-stepper-item.is-active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.step-stepper-item.is-complete { border-color: var(--ok); color: var(--ok); }
+.step-stepper-item.is-hidden { display: none; }
+.step-stepper-item[disabled] { cursor: default; }
+.step-stepper-circle {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--line);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #444;
+}
+.step-stepper-item.is-active .step-stepper-circle { background: var(--accent); color: #fff; }
+.step-stepper-item.is-complete .step-stepper-circle { background: var(--ok); color: #fff; }
+.step-progress-bar { margin-bottom: 12px; }
+.step-progress-track { height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.step-progress-fill { height: 100%; background: var(--accent); width: 0; transition: width .25s ease; }
+.step-nav { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.step-nav-info { flex: 1; text-align: center; color: var(--muted); font-size: 12.5px; }
+.step-field-error, .form-step-field-error input,
+.form-step-field-error select { border-color: var(--err); }
+.form-step-error-msg { color: var(--err); font-size: 12px; margin-top: 3px; }
+
+/* password: painel renderizado pelo plugin */
+.ilu-password-policy { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-top: 10px; background: #fbfcfd; }
+.ilu-password-policy__meter { display: flex; align-items: center; gap: 10px; }
+.ilu-password-policy__bar { height: 6px; border-radius: 3px; background: var(--err); width: 0; transition: width .2s ease; flex: 1; }
+.ilu-password-policy__bar.is-medium { background: var(--warn); }
+.ilu-password-policy__bar.is-strong { background: var(--ok); }
+.ilu-password-policy__score { font-size: 12px; color: var(--muted); min-width: 36px; text-align: right; }
+.ilu-password-policy__headline { font-size: 12.5px; color: var(--muted); margin: 8px 0 4px; }
+.ilu-password-policy__rules { list-style: none; padding: 0; margin: 0; font-size: 12.5px; }
+.ilu-password-policy__rule { display: flex; gap: 7px; padding: 1px 0; }
+.ilu-password-policy__rule.is-ok { color: var(--ok); }
+.ilu-password-policy__rule.is-error { color: var(--muted); }
+.ilu-field-error { border-color: var(--err) !important; }
+
+/* dynamic-table */
+.ilu-dynamic-table { font-size: 13px; }
+.ilu-dynamic-table input, .ilu-dynamic-table select { padding: 4px 6px; font-size: 13px; }
+.ilu-dynamic-table tfoot td { background: var(--code-bg); font-weight: 600; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a; --fg: #e6e8ea; --muted: #9aa1ab; --line: #2b3038;
+    --accent: #6f9dff; --accent-soft: #1b2231; --code-bg: #1b1e23;
+  }
+  input, select, textarea, .demo-live, .card { background: #1b1e23; border-color: #333941; }
+  input:disabled, select:disabled, textarea:disabled { background: #23262c; color: #6b7280; }
+  .panel, details.demo-code { background: #1a1d22; }
+  .warn { background: #2a1c1c; } .tip { background: #16241b; }
+  button.secondary { background: #1b1e23; }
+}

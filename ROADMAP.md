@@ -19,6 +19,21 @@ origem; num pacote público isso não existe, e sem isso ninguém adota.
 
 ## 1b. Arestas já identificadas
 
+- [ ] **Pertinência com 2 valores é mal compilada** (ver README). `['Uf' => ['SP','RJ']]`
+      colide com o par posicional `[operador, valor]` e vira `{"Uf":{"sp":"RJ"}}`,
+      condição eternamente falsa. É a aresta mais grave: falha em silêncio, e só
+      com exatamente 2 valores.
+      Correção proposta: no ramo de 2 elementos, só tratar como par posicional se
+      `$value[0]` for um operador conhecido (`normalizeOperator` devolver algo do
+      mapa ou um dos comparadores do runtime); caso contrário, é lista de valores.
+      Isso preserva `['!=', '']` e conserta `['SP','RJ']`.
+      **Mudança de comportamento** — `LocalEntregaCTL:356` usa a forma posicional
+      e precisa continuar funcionando; os testes de paridade cobrem os dois.
+- [ ] **Não existe operador `in`/`not_in` no runtime**, embora seja a escrita mais
+      natural para pertinência e o compilador PHP a deixe passar. Ou implementar
+      no `switch` do runtime, ou rejeitar no compilador — hoje ela vira `false`
+      silencioso.
+
 - [ ] **`findInput()` ignora o próprio elemento.** `required_when`/`disabled_when`
       e afins num `<input>` direto falham em silêncio (ver README, "Armadilha do
       wrapper"). Correção: se o elemento já casa com `input, select, textarea`,

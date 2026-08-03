@@ -4,7 +4,10 @@
   "private": true,
   "description": "Motor declarativo de comportamento de formulário para projetos legados — regras como atributos HTML.",
   "scripts": {
-    "test": "node tests/smoke.js"
+    "test": "node tests/smoke.js && node tests/cross-php-js.js && php tests/paridade-php.php",
+    "test:js": "node tests/smoke.js",
+    "test:cross": "node tests/cross-php-js.js",
+    "test:php": "php tests/paridade-php.php"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

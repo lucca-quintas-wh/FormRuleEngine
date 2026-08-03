@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 · Copiar, travar, reverter — Form Rule Engine</title>
+<link rel="stylesheet" href="assets/demo.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html">← Índice</a>
+    <span class="sep">/</span>
+    <span>06 · Copiar, travar, reverter</span>
+    <span class="spacer"></span>
+    <a href="07-mascara-validacao.html">Próximo →</a>
+  </div>
+
+  <h1><code>data-copy-when</code> · <code>data-lock-when</code> · <code>data-revert-when</code></h1>
+  <p class="lead">
+    Três respostas diferentes para a mesma pergunta — "este valor não pode ser esse" —
+    e a diferença entre elas é <em>quando</em> a regra age.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery</strong> (copy e revert) · lock não precisa</span>
+
+  <div class="note">
+    <p>
+      <strong>Qual usar.</strong>
+      <code>disabled_when</code> impede escolher.
+      <code>lock_when</code> escolhe por você e tranca.
+      <code>revert_when</code> deixa escolher, julga e <em>desfaz na hora</em>, com
+      mensagem.
+      <code>prevent_submit_when</code> deixa tudo acontecer e barra só no envio
+      (<a href="10-validacao-remota.html">página 10</a>).
+    </p>
+  </div>
+
+  <form data-form-visibility="true" name="formCopiar">
+
+    <h2>1. Copiar o valor de outro campo</h2>
+    <p>
+      <code>copy_when</code> mora no wrapper do campo de <strong>destino</strong> e
+      aponta a <code>source</code>. Enquanto a condição vale, o destino espelha a
+      origem a cada mudança dela.
+    </p>
+
+    <template data-src="HTML" data-open>
+      <label for="RazaoSocial">Razão social</label>
+      <input name="RazaoSocial" id="RazaoSocial" value="">
+
+      <label for="UsarMesmoNome">
+        <input type="checkbox" name="UsarMesmoNome" id="UsarMesmoNome" checked>
+        Nome fantasia igual à razão social
+      </label>
+
+      <div data-copy-when='{"source":"RazaoSocial","condition":{"UsarMesmoNome":"S"}}'>
+        <label for="NomeFantasia">Nome fantasia</label>
+        <input name="NomeFantasia" id="NomeFantasia">
+      </div>
+      <p class="hint">
+        Digite na razão social e veja o espelho. Desmarque a caixa: o destino volta ao
+        <strong>valor original</strong> que tinha quando a página carregou — o plugin
+        guarda esse valor na primeira avaliação. Para não restaurar, use
+        <code>"clear_on_unlock": false</code>.
+      </p>
+    </template>
+
+    <div class="table-scroll">
+      <table>
+        <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
+        <tr><td><code>source</code></td><td>—</td><td><strong>Obrigatória.</strong> Nome do campo de origem.</td></tr>
+        <tr><td><code>condition</code></td><td>sempre</td><td>Quando copiar. Sem ela, copia sempre.</td></tr>
+        <tr><td><code>event</code></td><td><code>change</code></td><td>Eventos do campo de destino a observar (separados por espaço).</td></tr>
+        <tr><td><code>clear_on_unlock</code></td><td><code>true</code></td><td>Ao deixar de valer, restaura o valor original do destino.</td></tr>
+      </table>
+    </div>
+
+    <div class="warn">
+      <p>
+        Checkbox vale <code>"S"</code> quando marcado e <code>"N"</code> quando não —
+        por isso a condição é <code>{"UsarMesmoNome":"S"}</code>. Escrever
+        <code>true</code> não funciona.
+      </p>
+    </div>
+
+    <h2>2. Travar com valor fixo</h2>
+    <p>
+      <code>lock_when</code> nomeia o <code>target</code> e o <code>value</code>.
+      Enquanto a condição vale: guarda o valor anterior, escreve o fixo, e põe
+      <code>readonly</code> <em>e</em> <code>disabled</code> no campo, mais a classe
+      <code>form-rule-locked</code> no wrapper. Quando deixa de valer, restaura.
+    </p>
+
+    <template data-src="HTML">
+      <label for="Rural">Produtor rural?</label>
+      <select name="Rural" id="Rural">
+        <option value="N">Não</option>
+        <option value="S">Sim</option>
+      </select>
+
+      <div data-lock-when='{"target":"TipoPessoa","value":"F",
+             "restore_on_unlock":true,"condition":{"Rural":"S"}}'>
+      </div>
+
+      <div class="ilu-form-field">
+        <label for="TipoPessoa">Tipo de pessoa</label>
+        <select name="TipoPessoa" id="TipoPessoa">
+          <option value="F">Pessoa física</option>
+          <option value="J">Pessoa jurídica</option>
+        </select>
+      </div>
+      <p class="hint">
+        Escolha "Pessoa jurídica", depois marque produtor rural: o campo é forçado
+        para física e trancado. Volte para "Não": o valor anterior retorna.
+      </p>
+    </template>
+
+    <div class="note">
+      <p>
+        Repare que o atributo está num <code>&lt;div&gt;</code> <strong>vazio</strong>.
+        <code>lock_when</code> age pelo <code>target</code>, então o elemento que
+        carrega o atributo é irrelevante — só precisa estar dentro do formulário. Foi
+        assim que a regra nasceu no gerador PHP, e é o formato que a engine espera.
+      </p>
+      <p>
+        O wrapper que recebe a classe visual é procurado com
+        <code>closest('.ilu-form-field, .drawer-form-field, .form-group')</code> a
+        partir do campo alvo — daí o <code>class="ilu-form-field"</code> no bloco acima.
+      </p>
+    </div>
+
+    <div class="warn">
+      <p>
+        <strong>Campo travado não é enviado.</strong> O plugin põe
+        <code>disabled</code>, e navegador não serializa campo desabilitado. Se o valor
+        travado precisa chegar ao servidor, mantenha um <code>&lt;input
+        type="hidden"&gt;</code> espelhando-o (por <code>set_value_when</code>, por
+        exemplo).
+      </p>
+    </div>
+
+    <h2>3. Reverter uma escolha</h2>
+    <p>
+      <code>revert_when</code> é a regra do tipo <em>"já existe X aqui, exclua antes de
+      trocar"</em>. A escolha é feita, avaliada e desfeita na hora, com a mensagem
+      explicando o porquê.
+    </p>
+    <p>
+      No exemplo: depois de adicionar itens a uma cotação, trocar o tipo de plano é
+      recusado. <code>remember_in</code> grava a escolha aceita num campo auxiliar;
+      <code>restore_from</code> diz de onde vem o valor de volta (sem ele, volta ao
+      valor anterior do próprio campo).
+    </p>
+
+    <template data-src="HTML">
+      <input type="hidden" name="tipoPlanoDefinido" value="">
+      <input type="hidden" name="itens" value="0">
+
+      <div data-revert-when='[{
+             "condition":{"AND":[
+               {"tipoPlanoDefinido":{"!=":""}},
+               {"tipoPlano":{"neq_field":"tipoPlanoDefinido"}},
+               {"itens":{">":0}}
+             ]},
+             "restore_from":"tipoPlanoDefinido",
+             "remember_in":"tipoPlanoDefinido",
+             "message_map":{
+               "1":"Já existe um Plano Coletivo Empresarial cotado. Remova os itens antes de trocar.",
+               "2":"Já existe um Plano Individual cotado. Remova os itens antes de trocar."
+             }
+           }]'>
+        <label for="tipoPlano">Tipo de plano</label>
+        <select name="tipoPlano" id="tipoPlano">
+          <option value="">.:Escolha:.</option>
+          <option value="1">Coletivo empresarial</option>
+          <option value="2">Individual</option>
+          <option value="3">Adesão</option>
+        </select>
+      </div>
+
+      <p style="margin-top:14px">
+        <button type="button" id="btnAddItem">Adicionar item à cotação</button>
+        <button type="button" class="secondary" id="btnZerarItens">Remover todos</button>
+        <span id="contadorItens" class="hint" style="margin-left:8px"></span>
+      </p>
+      <p class="hint">
+        Escolha um tipo, adicione um item, e então tente trocar o tipo.
+      </p>
+    </template>
+
+    <div class="table-scroll">
+      <table>
+        <tr><th>Chave</th><th>Descrição</th></tr>
+        <tr><td><code>condition</code></td><td>Quando a escolha deve ser recusada.</td></tr>
+        <tr><td><code>message_map</code></td><td>Mensagem por <em>valor escolhido</em>. Cai em <code>message</code> se não houver entrada.</td></tr>
+        <tr><td><code>message</code></td><td>Mensagem única, quando não há mapa.</td></tr>
+        <tr><td><code>type</code></td><td>Tipo da mensagem (<code>error</code> por padrão).</td></tr>
+        <tr><td><code>restore_from</code></td><td>Campo de onde vem o valor restaurado. Sem ele, usa o valor anterior do próprio campo.</td></tr>
+        <tr><td><code>remember_in</code></td><td>Quando a escolha é <strong>aceita</strong>, grava-a neste campo (sem disparar <code>change</code>).</td></tr>
+      </table>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong>Duas decisões de projeto que valem entender.</strong>
+      </p>
+      <p>
+        1. <code>extractDependencies()</code> devolve lista <strong>vazia</strong> de
+        propósito: a regra julga o <em>ato de escolher este campo</em>, não o estado do
+        formulário. Se fosse reavaliada quando terceiros mudam, reverteria um valor que
+        ninguém acabou de tocar.
+      </p>
+      <p>
+        2. Ela só julga eventos com <code>originalEvent</code> — isto é, ação humana.
+        Uma cascata que repopula o combo dispara <code>change</code> programático com
+        valor vazio, e reverter aí seria brigar com a cascata. A reversão em si também
+        <strong>não</strong> dispara <code>change</code>, para não cascatear a partir de
+        um valor que o usuário acabou de ter recusado.
+      </p>
+    </div>
+
+  </form>
+
+  <div class="panels">
+    <div data-demo-log></div>
+    <div data-demo-state></div>
+  </div>
+
+</div>
+
+<script src="assets/demo.js"></script>
+<script src="assets/mock-server.js"></script>
+<script src="assets/jquery-shim.js"></script>
+
+<script src="../src/form-rule-engine.js"></script>
+<script src="../src/plugins/form-rule-base.js"></script>
+<script src="../src/plugins/form-rule-copy.js"></script>
+<script src="../src/plugins/form-rule-lock.js"></script>
+<script src="../src/plugins/form-rule-revert.js"></script>
+<script src="../src/form-visibility-v2.js"></script>
+
+<script>
+  Demo.installMessaging();   // faz showMessage() da engine virar toast visível
+  Demo.state('form[name="formCopiar"]');
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var itens = document.querySelector('[name="itens"]');
+    var contador = document.getElementById('contadorItens');
+
+    function pinta() {
+      contador.textContent = 'itens na cotação: ' + itens.value;
+    }
+    document.getElementById('btnAddItem').addEventListener('click', function () {
+      itens.value = String(Number(itens.value) + 1);
+      pinta();
+      Demo.log('itens = ' + itens.value);
+    });
+    document.getElementById('btnZerarItens').addEventListener('click', function () {
+      itens.value = '0';
+      pinta();
+      Demo.log('itens = 0');
+    });
+    pinta();
+  });
+</script>
+</body>
+</html>

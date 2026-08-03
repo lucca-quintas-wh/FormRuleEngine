@@ -33,10 +33,11 @@ o conteúdo idênticos permite `diff` contra a origem enquanto a extração amad
 
 O que isso significa na prática, e que ainda **não** está resolvido:
 
-- **Não há build nem pacote npm.** São scripts carregados por `<script src>`.
-- **Há um único smoke test** (`npm test`), que prova que o núcleo + 4 plugins
-  rodam fora do projeto de origem, sem jQuery. Cobertura de verdade é o item 1
-  do roadmap.
+- **Não há build, nem pacote npm, nem pacote Composer.** São scripts carregados
+  por `<script src>` e uma classe PHP para `require`.
+- **Há três testes** (`npm test`) — smoke do runtime, paridade do interpretador
+  PHP contra o trait de origem, e um cruzado PHP→JS. Cobertura por plugin é o
+  item 1 do roadmap.
 - **5 dos 27 plugins ainda dependem do host original** (ver "Fronteira do host").
 - **Mensagens de erro estão em português**, embutidas no código.
 
@@ -210,16 +211,72 @@ em vez de mantê-lo forkado.
 
 ## O lado do servidor
 
-`reference/php/` traz, **como referência e não como pacote**, o compilador que gera
-esses atributos a partir de config declarativa PHP:
+### `src/php/FormRuleCompiler.php` — o interpretador
 
-- `form-builder.phtml` — compila `sections[] → fields[] → data-*-when`
+PHP puro, sem dependência de framework. Traduz config declarativa nos atributos
+que o runtime lê, e principalmente **normaliza a DSL**: aceita as várias formas
+que um autor escreve e emite a única forma que o JS entende.
+
+```php
+FormRuleCompiler::atributos([
+    'name'         => 'Cnpj',
+    'visible_when' => ['TipoPessoa' => 'J'],
+    'mask_when'    => ['mask' => '00.000.000/0000-00'],
+]);
+// →  data-visible-when='{"TipoPessoa":"J"}' data-mask-when='{"mask":"00.000.000\/0000-00"}'
+```
+
+Formas aceitas para uma condição, todas equivalentes a `{"Valor":{">":10}}`:
+
+```php
+['Valor' => ['>' => 10]]                          // canônica
+['Valor' => ['>', 10]]                            // par posicional
+['Valor', '>', 10]                                // trinca posicional
+['field' => 'Valor', 'op' => '>', 'value' => 10]  // verbosa
+```
+
+Mais: aliases de operador (`=`, `==`, `<>`, `neq` → `eq`/`!=`) e **`AND` implícito**
+para lista sequencial de condições — este último é capacidade só do compilador,
+já que o runtime avalia apenas a primeira chave de um objeto.
+
+Duas famílias de regra, tratadas diferente de propósito:
+
+- **condição pura** (`visible_when`, `required_when`, `disabled_when`, `label_when`,
+  `enabled_when`) — passa pelo normalizador;
+- **objeto rico** (`set_value_when`, `fetch_when`, `computed_when`, `lock_when`, …)
+  — vai como está. Normalizar quebraria a estrutura: em
+  `set_value_when => ['values' => [...], 'condition' => [...]]`, `values` viraria
+  nome de campo.
+
+#### Armadilha: pertinência com exatamente 2 valores
+
+`['Uf' => ['SP','RJ']]` é **indistinguível** de `['Cliente' => ['!=', '']]` — os dois
+são "array de 2 escalares". O compilador resolve a favor do par posicional, então
+o teste de pertinência com 2 valores compila para `{"Uf":{"sp":"RJ"}}`, o runtime
+não conhece o operador `sp`, e a condição fica **permanentemente falsa**.
+
+Com 1 ou 3+ valores funciona. Só 2 quebra, o que a torna pior que um erro
+consistente. `{"Uf":{"in":[...]}}` também não salva — não existe operador `in`
+no runtime. Enquanto isso não muda, escreva:
+
+```php
+['OR' => [['Uf' => 'SP'], ['Uf' => 'RJ']]]
+```
+
+Está fixado nos testes como comportamento **conhecido**, não desejado, e é o
+primeiro item do roadmap. Varri o CRM de origem: nenhuma tela cai nela hoje.
+
+### `reference/php/` — o resto, verbatim
+
+Não é pacote e não roda isolado; está aqui para responder *"como eu gero isso do
+meu backend?"* e para permitir `diff` contra a origem.
+
+- `FormRenderer.php` — o trait de onde o interpretador foi extraído. Contém o
+  render completo (`renderForm`, `emitFormOutput`, `buildFormValidationScript`,
+  normalização de seções/campos/botões) e depende de `Controller`, `View`, `SField*`.
+- `form-builder.phtml` — o emissor: `sections[] → fields[] → data-*-when`
 - `form-builder-compact.phtml` / `form-builder-cards.phtml` — variantes de layout
 - `FormFieldFactory.php` — fábrica de campo por `type`
-
-Está aqui para responder *"como eu gero isso do meu backend?"*. Estes arquivos
-**ainda dependem do framework de origem** e não rodam isolados. Se virar pacote
-Composer, será num repositório separado — o produto é o runtime JS + o contrato.
 
 ---
 

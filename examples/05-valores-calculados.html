@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 · Valores e cálculos — Form Rule Engine</title>
+<link rel="stylesheet" href="assets/demo.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html">← Índice</a>
+    <span class="sep">/</span>
+    <span>05 · Valores e cálculos</span>
+    <span class="spacer"></span>
+    <a href="06-copiar-travar-reverter.html">Próximo →</a>
+  </div>
+
+  <h1><code>data-set-value-when</code> · <code>data-computed-when</code></h1>
+  <p class="lead">
+    Os dois plugins que <em>escrevem</em> em campos. Ambos gravam por
+    <strong>nome</strong> (<code>target</code> / chaves de <code>values</code>), não no
+    elemento onde o atributo está — o que significa que o atributo pode morar em
+    qualquer lugar do formulário.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <form data-form-visibility="true" name="formCalculos">
+
+    <h2>1. Definir valor por template</h2>
+    <p>
+      <code>values</code> é um mapa <em>campo → template</em>. No template,
+      <code>{OutroCampo}</code> é substituído pelo valor atual daquele campo. A regra
+      reavalia sempre que qualquer campo citado (no template ou na condição) muda.
+    </p>
+
+    <template data-src="HTML" data-open>
+      <div class="row">
+        <div>
+          <label for="Nome">Nome</label>
+          <input name="Nome" id="Nome" value="Ana">
+        </div>
+        <div>
+          <label for="Sobrenome">Sobrenome</label>
+          <input name="Sobrenome" id="Sobrenome" value="Souza">
+        </div>
+      </div>
+
+      <div data-set-value-when='{"values":{"NomeCompleto":"{Nome} {Sobrenome}"}}'>
+        <label for="NomeCompleto">Nome completo (preenchido pela regra)</label>
+        <input name="NomeCompleto" id="NomeCompleto" readonly>
+      </div>
+    </template>
+
+    <h2>2. Definir valor sob condição</h2>
+    <p>
+      Com <code>condition</code>, a escrita só acontece enquanto a condição vale.
+      Quando ela deixa de valer, o plugin <strong>não desfaz</strong> — o último valor
+      escrito permanece. Se você precisa limpar, use uma segunda regra com a condição
+      inversa e template vazio.
+    </p>
+
+    <template data-src="HTML">
+      <label for="Canal">Canal de atendimento</label>
+      <select name="Canal" id="Canal">
+        <option value="">Selecione…</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="email">E-mail</option>
+        <option value="telefone">Telefone</option>
+      </select>
+
+      <div data-set-value-when='[
+             {"condition":{"Canal":"whatsapp"},"values":{"Sla":"2 horas","Fila":"comercial-wpp"}},
+             {"condition":{"Canal":"email"},   "values":{"Sla":"1 dia útil","Fila":"comercial-mail"}},
+             {"condition":{"Canal":"telefone"},"values":{"Sla":"imediato","Fila":"call-center"}},
+             {"condition":{"Canal":""},        "values":{"Sla":"","Fila":""}}
+           ]'>
+        <div class="row">
+          <div>
+            <label for="Sla">SLA</label>
+            <input name="Sla" id="Sla" readonly>
+          </div>
+          <div>
+            <label for="Fila">Fila</label>
+            <input name="Fila" id="Fila" readonly>
+          </div>
+        </div>
+      </div>
+      <p class="hint">
+        A regra é uma <strong>lista</strong>: todos os itens são avaliados, não só o
+        primeiro que casa. Por isso a última linha (condição <code>""</code>) consegue
+        limpar quando o usuário volta ao placeholder.
+      </p>
+    </template>
+
+    <div class="warn">
+      <p>
+        <strong>Sobrescreve o que o usuário digitou.</strong> A regra roda a cada
+        mudança de dependência, e não sabe se o valor atual veio dela ou de uma pessoa.
+        Para campos que o usuário também edita, prefira <code>copy_when</code> (que
+        guarda o valor original) ou <code>lock_when</code> (que trava e restaura).
+      </p>
+    </div>
+
+    <h2>3. Expressões aritméticas</h2>
+    <p>
+      <code>computed_when</code> com <code>expression</code>: o template é resolvido e,
+      <strong>se</strong> o resultado contiver apenas números e
+      <code>+ - * / ( ) . ,</code>, é avaliado como aritmética. Qualquer outro
+      caractere faz o plugin devolver a string resolvida como está — o que
+      transforma o mesmo mecanismo em concatenação de texto.
+    </p>
+
+    <template data-src="HTML">
+      <div class="row">
+        <div>
+          <label for="Quantidade">Quantidade</label>
+          <input type="number" name="Quantidade" id="Quantidade" value="3">
+        </div>
+        <div>
+          <label for="ValorUnitario">Valor unitário</label>
+          <input type="number" name="ValorUnitario" id="ValorUnitario" value="149.9">
+        </div>
+        <div>
+          <label for="Desconto">Desconto (%)</label>
+          <input type="number" name="Desconto" id="Desconto" value="10">
+        </div>
+      </div>
+
+      <div class="row">
+        <div data-computed-when='{"target":"Subtotal","expression":"{Quantidade} * {ValorUnitario}"}'>
+          <label for="Subtotal">Subtotal</label>
+          <input name="Subtotal" id="Subtotal" readonly>
+        </div>
+        <div data-computed-when='{"target":"Total","expression":"{Subtotal} - ({Subtotal} * {Desconto} / 100)"}'>
+          <label for="Total">Total</label>
+          <input name="Total" id="Total" readonly>
+        </div>
+      </div>
+      <p class="hint">
+        Duas regras encadeadas: <code>Total</code> depende de <code>Subtotal</code>,
+        que é escrito pela regra anterior. Funciona porque
+        <code>setFieldValue()</code> dispara <code>change</code> ao gravar.
+      </p>
+    </template>
+
+    <div class="warn">
+      <p>
+        <strong>Não coloque a regra que escreve X e a regra que lê X no mesmo
+        elemento.</strong> As dependências são calculadas por elemento: se um
+        <code>data-computed-when</code> tem <code>{"target":"Subtotal"}</code> numa
+        regra e <code>{Subtotal}</code> na outra, então <code>Subtotal</code> vira
+        dependência <em>do próprio elemento</em>. Gravar nele dispara
+        <code>change</code>, que reavalia o elemento, que grava de novo —
+        <strong>laço infinito</strong>, e a aba trava.
+      </p>
+      <pre><code>&lt;!-- TRAVA: Subtotal é escrito e lido pelo MESMO elemento --&gt;
+&lt;div data-computed-when='[
+  {"target":"Subtotal","expression":"{Quantidade} * {ValorUnitario}"},
+  {"target":"Total","expression":"{Subtotal} - 10"}]'&gt;
+
+&lt;!-- certo: um elemento por elo da cadeia --&gt;
+&lt;div data-computed-when='{"target":"Subtotal","expression":"{Quantidade} * {ValorUnitario}"}'&gt;…&lt;/div&gt;
+&lt;div data-computed-when='{"target":"Total","expression":"{Subtotal} - 10"}'&gt;…&lt;/div&gt;</code></pre>
+      <p>
+        A regra prática: agrupe no mesmo atributo apenas cálculos <em>irmãos</em> (que
+        leem as mesmas origens); separe os que formam uma <em>cadeia</em>. Vale para
+        <code>set_value_when</code> pelo mesmo motivo.
+      </p>
+    </div>
+
+    <div class="note">
+      <p>
+        <strong>Por que não é <code>eval</code> livre.</strong> A expressão só é
+        executada depois de passar por <code>/^[0-9+\-*/ ().,]+$/</code>. Um valor de
+        campo com letras não vira código: cai no ramo de texto. Ainda assim, a
+        substituição acontece antes do teste — então trate <code>expression</code> como
+        parte do seu template server-side, não como algo que o usuário final compõe.
+      </p>
+    </div>
+
+    <h2>4. Números no formato brasileiro</h2>
+    <p>
+      Campo mascarado como <code>1.234,56</code> quebra qualquer aritmética. Duas
+      chaves resolvem: <code>parse: "br"</code> normaliza a <em>entrada</em>
+      (<code>1.234,56 → 1234.56</code>) e <code>format: "br"</code> devolve o
+      <em>resultado</em> com duas casas e separadores brasileiros.
+    </p>
+
+    <template data-src="HTML">
+      <div class="row">
+        <div>
+          <label for="ValorBr">Valor (formato BR)</label>
+          <input name="ValorBr" id="ValorBr" value="1.234,56">
+        </div>
+        <div>
+          <label for="Parcelas">Parcelas</label>
+          <input type="number" name="Parcelas" id="Parcelas" value="3">
+        </div>
+      </div>
+
+      <div data-computed-when='{"target":"ValorParcela",
+             "expression":"{ValorBr} / {Parcelas}",
+             "parse":"br","format":"br"}'>
+        <label for="ValorParcela">Valor da parcela</label>
+        <input name="ValorParcela" id="ValorParcela" readonly>
+      </div>
+    </template>
+
+    <h2>5. Idade a partir da data de nascimento</h2>
+    <p>
+      <code>type: "age"</code> — anos <strong>completos</strong>, lendo
+      <code>dd/mm/aaaa</code> do campo em <code>source</code>. Rejeita data
+      inexistente (31/02 devolve vazio em vez de virar 03/03) e conta o aniversário do
+      ano corrente.
+    </p>
+
+    <template data-src="HTML">
+      <label for="Nascimento">Data de nascimento (dd/mm/aaaa)</label>
+      <input name="Nascimento" id="Nascimento" value="15/06/1990" placeholder="dd/mm/aaaa">
+
+      <div data-computed-when='{"target":"Idade","type":"age","source":"Nascimento"}'>
+        <label for="Idade">Idade</label>
+        <input name="Idade" id="Idade" readonly>
+      </div>
+    </template>
+
+    <h2>6. Faixa etária</h2>
+    <p>
+      <code>type: "age_band"</code> converte a idade em faixa. Sem a chave
+      <code>bands</code>, as faixas saem das <strong>opções do próprio campo de
+      destino</strong>, cujo valor codifica o intervalo (<code>"24.28"</code> = de 24 a
+      28). É o que permite trocar a tabela de faixas no servidor sem tocar em JS.
+    </p>
+
+    <template data-src="HTML">
+      <label for="Nascimento2">Data de nascimento</label>
+      <input name="Nascimento2" id="Nascimento2" value="04/02/1978" placeholder="dd/mm/aaaa">
+
+      <div data-computed-when='[
+             {"target":"Idade2","type":"age","source":"Nascimento2"},
+             {"target":"Faixa","type":"age_band","source":"Nascimento2"}
+           ]'>
+        <div class="row">
+          <div>
+            <label for="Idade2">Idade</label>
+            <input name="Idade2" id="Idade2" readonly>
+          </div>
+          <div>
+            <label for="Faixa">Faixa etária</label>
+            <select name="Faixa" id="Faixa">
+              <option value="">.:Escolha:.</option>
+              <option value="0.18">0 a 18 anos</option>
+              <option value="19.23">19 a 23 anos</option>
+              <option value="24.28">24 a 28 anos</option>
+              <option value="29.33">29 a 33 anos</option>
+              <option value="34.38">34 a 38 anos</option>
+              <option value="39.43">39 a 43 anos</option>
+              <option value="44.48">44 a 48 anos</option>
+              <option value="49.53">49 a 53 anos</option>
+              <option value="54.58">54 a 58 anos</option>
+              <option value="59.199">59 anos ou mais</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <p>Com faixas explícitas, o formato é este — e <code>lt</code> cobre o "abaixo de":</p>
+    <pre><code>{"target":"Faixa","type":"age_band","source":"Nascimento",
+ "bands":[{"lt":18,"value":"menor"},
+          {"min":18,"max":59,"value":"adulto"},
+          {"min":60,"value":"idoso"}]}</code></pre>
+
+    <h2>7. Diferença entre datas</h2>
+    <p>
+      <code>type: "days_between"</code> devolve dias inteiros entre
+      <code>start</code> e <code>end</code>, nunca negativo. Aceita
+      <code>dd/mm/aaaa</code> e também o que o <code>Date</code> nativo entender
+      (inclusive o <code>aaaa-mm-dd</code> de um <code>&lt;input type="date"&gt;</code>).
+    </p>
+
+    <template data-src="HTML">
+      <div class="row">
+        <div>
+          <label for="DataInicio">Início</label>
+          <input type="date" name="DataInicio" id="DataInicio" value="2026-01-10">
+        </div>
+        <div>
+          <label for="DataFim">Fim</label>
+          <input type="date" name="DataFim" id="DataFim" value="2026-03-01">
+        </div>
+      </div>
+
+      <div data-computed-when='{"target":"Dias","type":"days_between","start":"DataInicio","end":"DataFim"}'>
+        <label for="Dias">Dias de vigência</label>
+        <input name="Dias" id="Dias" readonly>
+      </div>
+    </template>
+
+    <h2>8. Cálculo condicional</h2>
+    <p>
+      Com <code>condition</code>, o cálculo só roda quando ela vale. Fora disso o campo
+      fica como estava — o plugin devolve <code>undefined</code> e
+      <code>setFieldValue</code> nem é chamado.
+    </p>
+
+    <template data-src="HTML">
+      <label for="TipoCobranca">Tipo de cobrança</label>
+      <select name="TipoCobranca" id="TipoCobranca">
+        <option value="mensal">Mensal</option>
+        <option value="anual">Anual (10% off)</option>
+      </select>
+
+      <label for="Mensalidade">Mensalidade</label>
+      <input type="number" name="Mensalidade" id="Mensalidade" value="200">
+
+      <div data-computed-when='[
+             {"target":"ValorCobrado","condition":{"TipoCobranca":"mensal"},
+              "expression":"{Mensalidade}"},
+             {"target":"ValorCobrado","condition":{"TipoCobranca":"anual"},
+              "expression":"{Mensalidade} * 12 * 0.9"}
+           ]'>
+        <label for="ValorCobrado">Valor cobrado</label>
+        <input name="ValorCobrado" id="ValorCobrado" readonly>
+      </div>
+    </template>
+
+    <h2>9. Referência das chaves</h2>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Chave</th><th>Plugin</th><th>Descrição</th></tr>
+        <tr><td><code>target</code></td><td>computed</td><td><strong>Obrigatória.</strong> Nome do campo que recebe o valor.</td></tr>
+        <tr><td><code>values</code></td><td>set-value</td><td>Mapa <em>campo → template</em>. Vários campos por regra.</td></tr>
+        <tr><td><code>condition</code></td><td>ambos</td><td>Condição da DSL. Sem ela, a regra vale sempre.</td></tr>
+        <tr><td><code>expression</code></td><td>computed</td><td>Template; aritmética se o resultado for só números e operadores.</td></tr>
+        <tr><td><code>value</code></td><td>computed</td><td>Template puro, sem tentativa de cálculo.</td></tr>
+        <tr><td><code>type</code></td><td>computed</td><td><code>age</code>, <code>age_band</code> ou <code>days_between</code>.</td></tr>
+        <tr><td><code>source</code></td><td>computed</td><td>Campo de origem para <code>age</code> / <code>age_band</code>.</td></tr>
+        <tr><td><code>start</code>, <code>end</code></td><td>computed</td><td>Campos de data para <code>days_between</code>.</td></tr>
+        <tr><td><code>bands</code></td><td>computed</td><td>Faixas explícitas: <code>{min,max,value}</code> ou <code>{lt,value}</code>.</td></tr>
+        <tr><td><code>parse</code></td><td>computed</td><td><code>"br"</code>: normaliza números <code>1.234,56</code> antes de calcular.</td></tr>
+        <tr><td><code>format</code></td><td>computed</td><td><code>"br"</code>: formata o resultado com 2 casas, padrão pt-BR.</td></tr>
+      </table>
+    </div>
+
+  </form>
+
+  <div class="panels">
+    <div data-demo-log></div>
+    <div data-demo-state></div>
+  </div>
+
+</div>
+
+<script src="assets/demo.js"></script>
+
+<script src="../src/form-rule-engine.js"></script>
+<script src="../src/plugins/form-rule-base.js"></script>
+<script src="../src/plugins/form-rule-set-value.js"></script>
+<script src="../src/plugins/form-rule-computed.js"></script>
+<script src="../src/form-visibility-v2.js"></script>
+
+<script>
+  Demo.state('form[name="formCalculos"]');
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelector('form[name="formCalculos"]')
+      .addEventListener('change', function (e) {
+        Demo.log(e.target.name + ' = "' + e.target.value + '"');
+      });
+  });
+</script>
+</body>
+</html>
