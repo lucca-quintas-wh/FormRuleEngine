@@ -1,0 +1,958 @@
+<?php
+$params = isset($params) && is_array($params) ? $params : [];
+
+$tagForm       = $params['tag_form']       ?? null;
+$persist       = $params['persist']        ?? [];
+$hidden        = $params['hidden']         ?? [];
+$sections      = $params['sections']       ?? [];
+$buttons       = $params['buttons']        ?? [];
+$title         = $params['title']          ?? '';
+$subtitle      = $params['subtitle']       ?? '';
+$beforeContent = $params['before_content'] ?? '';
+$afterHtml     = $params['after_html']     ?? '';
+$afterScript   = $params['after_script']   ?? '';
+$formName      = $params['form_name']      ?? ($params['form_id'] ?? '');
+$formId        = $params['form_id']        ?? $formName;
+$controller    = $params['controller']     ?? '';
+$afterAction   = $params['after_action']   ?? 'listagem';
+$isAggregate   = !empty($params['is_aggregate']);
+$clearAfter    = $params['clear_after']    ?? true;
+$pageClass     = $params['page_class']     ?? '';
+$formClass     = $params['form_class']     ?? '';
+$clientBehaviorsJson = $params['client_behaviors_json'] ?? '';
+$loadRuleAssets = array_key_exists('load_rule_assets', $params) ? (bool) $params['load_rule_assets'] : true;
+$hasSteps      = false;
+
+foreach ($sections as $sec) {
+    if (!empty($sec['__step'])) {
+        $hasSteps = true;
+        break;
+    }
+}
+
+if (empty($sections) && !empty($fields)) {
+    $sections = [
+        ['title' => '', 'fields' => $fields]
+    ];
+}
+
+$hasSectionGrid = false;
+if (!$hasSteps) {
+    foreach ($sections as $sec) {
+        $secCol = (int) ($sec['col'] ?? 12);
+        if ($secCol > 0 && $secCol < 12) {
+            $hasSectionGrid = true;
+            break;
+        }
+    }
+}
+
+if (!function_exists('fbCompactRenderJsArg')) {
+function fbCompactRenderJsArg($value) {
+    if ($value === null) return "''";
+    if (is_bool($value)) return $value ? 'true' : 'false';
+    if (is_numeric($value)) return (string) $value;
+    return "'" . addslashes((string) $value) . "'";
+}
+}
+
+if (!function_exists('fbCompactDefaultMode')) {
+function fbCompactDefaultMode($type, $isAggregate = false) {
+    $dialogMode = defined('DIALOG') && DIALOG != false;
+    switch ($type) {
+        case 'save': case 'btn1':
+            return $isAggregate ? ($dialogMode ? 7 : 5) : ($dialogMode ? 1 : 2);
+        case 'save_and_add': case 'btn2':
+            return $dialogMode ? ($isAggregate ? 8 : 3) : 4;
+        default: return 2;
+    }
+}
+}
+
+if (!function_exists('fbCompactBuildBackRoute')) {
+function fbCompactBuildBackRoute($action, $controllerName) {
+    if ($action === '') return $controllerName !== '' ? $controllerName . '/listagem' : '';
+    if ($controllerName !== '' && strpos($action, '/') === false) return $controllerName . '/' . $action;
+    return $action;
+}
+}
+
+if (!function_exists('fbCompactConditionMet')) {
+function fbCompactConditionMet($condition) {
+    if ($condition === null || $condition === '') return true;
+    if (is_bool($condition)) return $condition;
+    $condition = trim((string) $condition);
+    if ($condition === '!DIALOG') return !defined('DIALOG') || DIALOG == false;
+    if ($condition === 'DIALOG') return defined('DIALOG') && DIALOG != false;
+    return $condition !== '';
+}
+}
+
+if (!function_exists('fbRepeaterRenderTemplateField')) {
+function fbRepeaterRenderTemplateField(array $fieldCfg): string {
+    $cfg      = $fieldCfg;
+    $origName = (string) ($fieldCfg['name'] ?? '');
+    $cfg['name'] = $origName . '__IDX__';
+    if (isset($cfg['id'])) $cfg['id'] = (string) $cfg['id'] . '__IDX__';
+    // Não pré-preenche valores no template
+    unset($cfg['value'], $cfg['display']);
+
+    $fieldObj  = FormFieldFactory::make($cfg);
+    $fieldHtml = $fieldObj->compilate();
+    if (method_exists($fieldObj, 'getLoader')) {
+        $fieldHtml .= $fieldObj->getLoader();
+    }
+
+    $label    = $fieldCfg['label'] ?? '';
+    $required = !empty($fieldCfg['required']);
+    $col      = max(1, min(12, (int) ($fieldCfg['col'] ?? 6)));
+    $fieldId  = $cfg['name'];
+
+    $labelHtml = '';
+    if ($label !== '') {
+        $reqClass  = $required ? ' ilu-form-compact__label--required' : '';
+        $labelHtml = '<label class="ilu-form-compact__label' . $reqClass . '" for="'
+                   . htmlspecialchars($fieldId, ENT_QUOTES, 'UTF-8') . '">'
+                   . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</label>';
+    }
+
+    $ruleAttrMap = [
+        'fetch_when'     => 'fetch',
+        'visible_when'   => 'visible',
+        'required_when'  => 'required',
+        'disabled_when'  => 'disabled',
+        'set_value_when' => 'set-value',
+        'computed_when'  => 'computed',
+        'trigger_when'   => 'trigger',
+        'populate_when'  => 'populate',
+        'lock_when'      => 'lock',
+    ];
+    $ruleAttrs = '';
+    foreach ($ruleAttrMap as $cfgKey => $attrName) {
+        if (!empty($fieldCfg[$cfgKey])) {
+            $ruleAttrs .= ' data-' . $attrName . '-when="'
+                . htmlspecialchars(json_encode($fieldCfg[$cfgKey]), ENT_QUOTES, 'UTF-8') . '"';
+        }
+    }
+
+    // wrapper_id (com __IDX__ preservado) — permite que fetch/set_html mirem o wrapper
+    // por linha, ex.: ícone %/R$ do campo money via '#aplComissao__IDX__ .input-group-text'.
+    $wrapperId     = isset($fieldCfg['wrapper_id']) ? (string) $fieldCfg['wrapper_id'] : '';
+    $wrapperIdAttr = $wrapperId !== '' ? ' id="' . htmlspecialchars($wrapperId, ENT_QUOTES, 'UTF-8') . '"' : '';
+
+    return '<div class="ilu-form-compact__field ilu-form-compact__field--col-' . $col . '"' . $wrapperIdAttr . $ruleAttrs . '>'
+         . $labelHtml
+         . '<div class="ilu-form-compact__input">' . $fieldHtml . '</div>'
+         . '</div>';
+}
+}
+
+if (!function_exists('fbCompactRenderButton')) {
+function fbCompactRenderButton($buttonKey, $button, $formName = '', $controllerName = '', $defaultAfterAction = 'listagem', $isAggregate = false) {
+    if (empty($button) || $button === false) return '';
+    if ($button === true) $button = ['type' => $buttonKey];
+    if (is_object($button) && method_exists($button, 'compilate')) return $button->compilate();
+    if (is_string($button)) return $button;
+    if (!is_array($button)) return '';
+    if (!fbCompactConditionMet($button['condition'] ?? null)) return '';
+
+    $type = $button['type'] ?? ($button['name'] ?? $buttonKey);
+    $label = $button['label'] ?? ($button['value'] ?? '');
+    $action = $button['action'] ?? '';
+    $onclick = $button['onclick'] ?? ($button['onClick'] ?? '');
+    $returnMode = $button['return_mode'] ?? ($button['mode'] ?? fbCompactDefaultMode($type, $isAggregate));
+    $extraParam = $button['extra_param'] ?? ($button['extraParam'] ?? '');
+    $extraParam2 = $button['extra_param_2'] ?? ($button['extraParam2'] ?? '');
+    $afterActionBtn = $button['after_action'] ?? ($button['afterAction'] ?? ($button['afteract'] ?? $defaultAfterAction));
+    $class = $button['class'] ?? 'btn-v5-primary';
+
+    if (empty($label)) {
+        switch ($type) {
+            case 'save': case 'btn1': $label = 'Salvar'; break;
+            case 'save_and_add': case 'btn2': $label = 'Salvar e Adicionar'; break;
+            case 'back': case 'btn3': $label = 'Voltar'; break;
+            default: $label = 'Botão';
+        }
+    }
+
+    if (empty($onclick)) {
+        if (strpos($action, '(') !== false) {
+            $onclick = $action;
+        } elseif (in_array($type, ['back', 'btn3'], true)) {
+            $backRoute = fbCompactBuildBackRoute($action, $controllerName);
+            if ($backRoute !== '') {
+                $onclick = "voltar(" . fbCompactRenderJsArg($backRoute) . ", " . fbCompactRenderJsArg($formName) . ")";
+            }
+        } elseif (!empty($action) && !empty($formName) && !empty($controllerName)) {
+            $args = [
+                fbCompactRenderJsArg($formName),
+                fbCompactRenderJsArg($controllerName),
+                fbCompactRenderJsArg($action),
+                fbCompactRenderJsArg($afterActionBtn),
+                fbCompactRenderJsArg($returnMode),
+            ];
+            if ($extraParam !== '') $args[] = fbCompactRenderJsArg($extraParam);
+            if ($extraParam2 !== '') {
+                if ($extraParam === '') $args[] = "''";
+                $args[] = fbCompactRenderJsArg($extraParam2);
+            }
+            $onclick = 'sendForm(' . implode(', ', $args) . ')';
+        } elseif (!empty($action)) {
+            $onclick = "voltar(" . fbCompactRenderJsArg($action) . ", " . fbCompactRenderJsArg($formName) . ")";
+        }
+    }
+
+    $icon = $button['icon'] ?? '';
+    $iconHtml = '';
+    if ($icon !== '') {
+        $iconHtml = '<svg class="ilu-form-btn-icon" width="16" height="16"><use href="#' . htmlspecialchars($icon) . '"></use></svg>';
+    }
+
+    $attrs = '';
+    if (!empty($button['__confirm_submit_json'])) {
+        $attrs .= ' data-confirm-submit-when="' . htmlspecialchars($button['__confirm_submit_json']) . '"';
+    }
+
+    return '<button type="button" class="' . htmlspecialchars($class) . '" onclick="' . IluAtributo::js($onclick) . '"' . $attrs . '>' . $iconHtml . htmlspecialchars($label) . '</button>';
+}
+}
+?>
+
+<?php if (!empty($tagForm)): ?>
+<?php
+    $hasVisibility = $hasSteps || $clientBehaviorsJson !== '' || !empty($__submit_handler_json);
+    foreach ($sections as $sec) {
+        if (!empty($sec['__visible_when_json'])) {
+            $hasVisibility = true;
+            break;
+        }
+        if (!empty($sec['fields'])) {
+            foreach ($sec['fields'] as $fld) {
+                if (is_array($fld) && (
+                    !empty($fld['__visible_when_json']) ||
+                    !empty($fld['__required_when_json']) ||
+                    !empty($fld['__disabled_when_json']) ||
+                    !empty($fld['__label_when_json']) ||
+                    !empty($fld['__options_when_json']) ||
+                    !empty($fld['__mask_when_json']) ||
+                    !empty($fld['__validate_when_json']) ||
+                    !empty($fld['__fetch_when_json']) ||
+                    !empty($fld['__remote_validate_when_json']) ||
+                    !empty($fld['__set_value_when_json']) ||
+                    !empty($fld['__computed_when_json']) ||
+                    !empty($fld['__dynamic_table_json']) ||
+                    !empty($fld['__password_policy_json']) ||
+                    !empty($fld['__copy_when_json']) ||
+                    !empty($fld['__revert_when_json'])
+                )) {
+                    $hasVisibility = true;
+                    break 2;
+                }
+            }
+        }
+    }
+    foreach ($buttons as $btn) {
+        if (is_array($btn) && !empty($btn['__confirm_submit_json'])) {
+            $hasVisibility = true;
+            break;
+        }
+    }
+
+    if (!$hasVisibility && !empty($afterHtml) && strpos($afterHtml, 'data-visible-when') !== false) {
+        $hasVisibility = true;
+    }
+
+    if ($hasVisibility && strpos($tagForm, 'data-form-visibility') === false) {
+        $tagForm = str_replace('<form ', '<form data-form-visibility="true" ', $tagForm);
+    }
+    if ($clientBehaviorsJson !== '' && strpos($tagForm, 'data-behavior-when') === false) {
+        $tagForm = str_replace('<form ', '<form data-behavior-when="' . htmlspecialchars($clientBehaviorsJson, ENT_QUOTES, 'UTF-8') . '" ', $tagForm);
+    }
+    if (!empty($__submit_handler_json) && strpos($tagForm, 'data-submit-handler') === false) {
+        $tagForm = str_replace('<form ', '<form data-submit-handler="' . htmlspecialchars($__submit_handler_json, ENT_QUOTES, 'UTF-8') . '" ', $tagForm);
+    }
+?>
+<?=$tagForm;?>
+<?php endif; ?>
+
+<?php foreach ($persist as $persistField): ?>
+<?=$persistField;?>
+<?php endforeach; ?>
+
+<?php foreach ($hidden as $hiddenField): ?>
+<?=$hiddenField;?>
+<?php endforeach; ?>
+
+<?php if (!empty($beforeContent)): ?>
+<?=$beforeContent;?>
+<?php endif; ?>
+
+<?php if ($hasSteps): ?>
+    <input type="hidden" data-step-rules value="<?= htmlspecialchars($params['step_rules_json'] ?? '[]', ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" data-step-config value="<?= htmlspecialchars(json_encode($params['step_config'] ?? []), ENT_QUOTES, 'UTF-8') ?>">
+    <style>
+        /* Chrome do wizard (progress + stepper) theme-aware. Tokens com defaults
+           claros e override no tema escuro; o acento vem de --theme-primary, então
+           acompanha a cor do tema (amarelo/aqua/azul…). Antes as cores eram light
+           hardcoded e o stepper só tinha estilo escopado a .tabela-preco-wizard. */
+        .ilu-form-compact--steps {
+            --step-surface: #f8fafc;
+            --step-border: #e2e8f0;
+            --step-track: #e2e8f0;
+            --step-accent: var(--theme-primary, #0d7377);
+            --step-accent-text: var(--theme-primary-text, #ffffff);
+            --step-circle-bg: #ffffff;
+            --step-circle-border: #cbd5e1;
+            --step-text: #475569;
+            --step-text-active: #0f172a;
+        }
+        html[data-shell-theme="dark"] .ilu-form-compact--steps {
+            --step-surface: rgba(255, 255, 255, 0.03);
+            --step-border: rgba(255, 255, 255, 0.08);
+            --step-track: rgba(255, 255, 255, 0.12);
+            --step-circle-bg: rgba(255, 255, 255, 0.06);
+            --step-circle-border: rgba(255, 255, 255, 0.18);
+            --step-text: #8aa0b2;
+            --step-text-active: #e8f0f5;
+        }
+        .step-progress-bar { padding: 12px 16px; background: var(--step-surface); border-bottom: 1px solid var(--step-border); }
+        .step-progress-track { height: 6px; background: var(--step-track); border-radius: 3px; overflow: hidden; }
+        .step-progress-fill { height: 100%; background: var(--step-accent); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
+        .step-nav { padding: 12px 16px; border-top: 1px solid var(--step-border); background: var(--step-surface); }
+
+        /* Stepper base (global, theme-aware) — círculo numerado + rótulo. */
+        .step-stepper { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px 0; }
+        .step-stepper-item { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border: 1px solid var(--step-border); border-radius: 999px; background: transparent; color: var(--step-text); font-size: 13px; line-height: 1; cursor: pointer; }
+        .step-stepper-item.is-hidden { display: none; }
+        .step-stepper-circle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--step-circle-bg); border: 1px solid var(--step-circle-border); color: var(--step-text); font-size: 12px; font-weight: 700; }
+        .step-stepper-label { font-weight: 600; }
+        .step-stepper-item.is-active { border-color: var(--step-accent); color: var(--step-text-active); }
+        .step-stepper-item.is-active .step-stepper-circle,
+        .step-stepper-item.is-complete .step-stepper-circle { background: var(--step-accent); border-color: var(--step-accent); color: var(--step-accent-text); }
+        .ilu-form-compact--steps.lead-budget-bento {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 12px;
+            padding: 12px 14px 16px;
+            align-items: start;
+        }
+        .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section {
+            grid-column: span 3;
+            min-width: 0;
+            border: 1px solid var(--ilu-border-subtle, #e3e8ee);
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section + .ilu-form-compact__section {
+            border-top: 1px solid var(--ilu-border-subtle, #e3e8ee);
+        }
+        .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section:not([data-step]),
+        .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section.form-step-current {
+            grid-column: span 6;
+        }
+        .ilu-form-compact--steps.lead-budget-bento .ilu-form-compact__section-title {
+            margin-bottom: 0;
+        }
+        .ilu-form-compact--steps.lead-budget-bento .ilu-form-compact__grid {
+            grid-template-columns: 1fr;
+        }
+        .ilu-form-compact--steps.lead-budget-bento .ilu-form-compact__field[class*="--col-"] {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 1199px) {
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section {
+                grid-column: span 4;
+            }
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section:not([data-step]),
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section.form-step-current {
+                grid-column: span 8;
+            }
+        }
+        @media (max-width: 767px) {
+            .ilu-form-compact--steps.lead-budget-bento {
+                grid-template-columns: 1fr;
+                padding: 10px 12px 14px;
+            }
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section,
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section:not([data-step]),
+            .ilu-form-compact--steps.lead-budget-bento > .ilu-form-compact__section.form-step-current {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+<?php endif; ?>
+
+<div class="ilu-form-compact <?= $hasSteps ? 'ilu-form-compact--steps' : ''; ?> <?= $hasSectionGrid ? 'ilu-form-compact--section-grid' : ''; ?> <?=htmlspecialchars($formClass);?> <?=htmlspecialchars($pageClass);?>">
+
+    <?php if (!empty($title) || !empty($subtitle)): ?>
+    <div class="ilu-form-compact__header">
+        <?php if (!empty($title)): ?>
+        <h1 class="ilu-form-compact__title"><?=htmlspecialchars($title);?></h1>
+        <?php endif; ?>
+        <?php if (!empty($subtitle)): ?>
+        <p class="ilu-form-compact__subtitle"><?=htmlspecialchars($subtitle);?></p>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php foreach ($sections as $sectionIndex => $section): ?>
+    <?php
+    $secTitle = $section['title'] ?? '';
+    $secCol = max(1, min(12, (int) ($section['col'] ?? 12)));
+    $secClass = trim(($section['class'] ?? '') . ' ' . ($section['className'] ?? ''));
+    $secFields = $section['fields'] ?? [];
+    $secId = $section['id'] ?? ('ilu-csection-' . $sectionIndex);
+    $secStep = !empty($section['__step'])
+        ? ' data-step="' . (int) $section['__step'] . '"'
+        : '';
+    $secVisibleWhen = !empty($section['__visible_when_json'])
+        ? ' data-visible-when="' . htmlspecialchars($section['__visible_when_json']) . '"'
+        : '';
+    ?>
+    <div id="<?=htmlspecialchars($secId);?>" class="ilu-form-compact__section ilu-form-compact__section--col-<?=(int)$secCol;?> <?=htmlspecialchars($secClass);?>"<?=$secStep.$secVisibleWhen;?>>
+        <?php
+        // Ações da SEÇÃO (link ao lado do título). Mesmo contrato do
+        // form-builder.phtml — ver o comentário longo lá. Aqui o header já
+        // existia, só não sabia renderizar ação nenhuma.
+        $secActions = isset($section['actions']) && is_array($section['actions']) ? $section['actions'] : [];
+        ?>
+        <?php
+        // Seção sanfonada: `collapsible` (e `collapsed` para nascer fechada).
+        // Implementado com checkbox + irmão geral em CSS, sem JS: o conteúdo do
+        // drawer é reinjetado por AJAX a cada abertura, e um toggle que dependesse
+        // de init JS exigiria idempotência. O input NÃO tem name, então não entra
+        // no serialize() do formulário.
+        $secCollapsible = !empty($section['collapsible']);
+        $secCollapsed   = !empty($section['collapsed']);
+        $secToggleId    = $secId . '__collapse';
+        ?>
+        <?php if ($secCollapsible): ?>
+        <input type="checkbox" class="ilu-form-section__collapse-input" id="<?=htmlspecialchars($secToggleId);?>" <?= $secCollapsed ? 'checked' : '' ?>>
+        <?php endif; ?>
+        <?php if (!empty($secTitle) || !empty($secActions)): ?>
+        <div class="ilu-form-compact__section-header ilu-form-section__header<?= $secCollapsible ? ' ilu-form-section__header--collapsible' : '' ?>">
+            <?php if (!empty($secTitle) && $secCollapsible): ?>
+            <label class="ilu-form-section__collapse-label" for="<?=htmlspecialchars($secToggleId);?>">
+                <span class="ilu-form-section__chevron" aria-hidden="true"><?= function_exists('getHeroiconSVG') ? getHeroiconSVG('chevron-down', 'icon', 'sm') : '' ?></span>
+                <h2 class="ilu-form-compact__section-title"><?=htmlspecialchars($secTitle);?></h2>
+            </label>
+            <?php elseif (!empty($secTitle)): ?>
+            <h2 class="ilu-form-compact__section-title"><?=htmlspecialchars($secTitle);?></h2>
+            <?php endif; ?>
+            <?php foreach ($secActions as $act):
+                $actStyle   = ($act['style'] ?? 'link') === 'button' ? 'button' : 'link';
+                $actVisible = !empty($act['visible_when'])
+                    ? ' data-visible-when="' . htmlspecialchars(json_encode($act['visible_when'], JSON_UNESCAPED_UNICODE)) . '"'
+                    : '';
+                $actLabels  = isset($act['labels']) && is_array($act['labels']) ? $act['labels'] : [];
+            ?>
+            <button type="button"
+                    class="ilu-form-section__action ilu-form-section__action--<?= $actStyle ?>"
+                    <?php if (!empty($act['name'])): ?>id="<?=htmlspecialchars($act['name']);?>"<?php endif; ?>
+                    title="<?=htmlspecialchars((string) ($act['title'] ?? ''));?>"
+                    onclick="<?=htmlspecialchars((string) ($act['onclick'] ?? ''));?>"<?=$actVisible;?>>
+                <?php if ($actLabels): ?>
+                    <?php foreach ($actLabels as $variante): ?>
+                    <span data-visible-when="<?=htmlspecialchars(json_encode($variante['when'] ?? [], JSON_UNESCAPED_UNICODE));?>"><?=htmlspecialchars((string) ($variante['label'] ?? ''));?></span>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <?=htmlspecialchars((string) ($act['label'] ?? ''));?>
+                <?php endif; ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="ilu-form-compact__grid">
+            <?php foreach ($secFields as $field): ?>
+            <?php
+            // ── Repeater ──────────────────────────────────────────────────────
+            if (is_array($field) && isset($field['type']) && strtolower((string) $field['type']) === 'repeater') {
+                $rName     = htmlspecialchars($field['name'] ?? 'repeater', ENT_QUOTES, 'UTF-8');
+                $rMin      = max(0, (int) ($field['min'] ?? 0));
+                $rMax      = max(1, (int) ($field['max'] ?? 99));
+                $rCol      = max(1, min(12, (int) ($field['col'] ?? 12)));
+                $rAddLabel = htmlspecialchars($field['add_label']    ?? '+ Adicionar', ENT_QUOTES, 'UTF-8');
+                $rRemLabel = htmlspecialchars($field['remove_label'] ?? '✕',           ENT_QUOTES, 'UTF-8');
+                $rCbAttr   = !empty($field['on_row_added'])
+                    ? ' data-on-row-added="' . htmlspecialchars($field['on_row_added'], ENT_QUOTES, 'UTF-8') . '"'
+                    : '';
+                $rCbRemAttr = !empty($field['on_row_removed'])
+                    ? ' data-on-row-removed="' . htmlspecialchars($field['on_row_removed'], ENT_QUOTES, 'UTF-8') . '"'
+                    : '';
+                $rRows    = (isset($field['rows']) && is_array($field['rows'])) ? array_values($field['rows']) : [];
+                $rRowsAttr = $rRows
+                    ? ' data-repeater-rows="' . htmlspecialchars(json_encode($rRows, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') . '"'
+                    : '';
+                $rTplHtml = '';
+                foreach ($field['fields'] ?? [] as $subField) {
+                    if (is_array($subField)) {
+                        $rTplHtml .= fbRepeaterRenderTemplateField($subField);
+                    }
+                }
+            ?>
+            <div class="ilu-form-compact__field ilu-form-compact__field--col-<?=$rCol;?> ilu-repeater"
+                 id="ilu-repeater-<?=$rName;?>"
+                 data-repeater-name="<?=$rName;?>"
+                 data-repeater-min="<?=$rMin;?>"
+                 data-repeater-max="<?=$rMax;?>"
+                 <?=$rCbAttr . $rCbRemAttr . $rRowsAttr;?>>
+                <template>
+                    <div class="ilu-repeater__row" data-repeater-row>
+                        <div class="ilu-form-compact__grid"><?=$rTplHtml;?></div>
+                        <button type="button" class="ilu-repeater__remove-btn" title="<?=$rRemLabel;?>"><?=$rRemLabel;?></button>
+                    </div>
+                </template>
+                <div class="ilu-repeater__rows"></div>
+                <button type="button" class="ilu-repeater__add-btn"><?=$rAddLabel;?></button>
+            </div>
+            <?php continue; ?>
+            <?php } // end repeater ?>
+            <?php
+            $fieldConfig = null;
+            $fieldCol = 12;
+            if (is_array($field) && isset($field['col'])) {
+                $fieldCol = (int) $field['col'];
+            }
+            if (is_array($field)) {
+                $fieldConfig = $field;
+            }
+            $fieldInput = '';
+            $fieldLabel = '';
+            $isRequired = false;
+            $fieldId = '';
+            $fieldName = '';
+            $fieldWrapperId = '';
+            $fieldWrapperClass = '';
+            $fieldWrapperStyle = '';
+
+            if (is_object($field) && method_exists($field, 'compilate')) {
+                $fieldInput = $field->compilate();
+                $fieldLabel = method_exists($field, 'getLabel') ? $field->getLabel() : '';
+                $isRequired = strpos($fieldLabel, 'asterisk') !== false;
+                $fieldId = method_exists($field, 'getName') ? $field->getName() : '';
+                $fieldName = $fieldId;
+            } elseif (is_array($field)) {
+                $fieldSource = $field['input'] ?? ($field['tag'] ?? ($field['field'] ?? null));
+                $fieldType = strtolower((string) ($field['type'] ?? ''));
+                $rawHtmlTypes = ['info', 'html', 'static', 'label'];
+                if ($fieldSource === null && !empty($field['html']) && ($fieldType === '' || in_array($fieldType, $rawHtmlTypes, true))) {
+                    $fieldSource = (string) $field['html'];
+                } elseif ($fieldSource === null && isset($field['type'])) {
+                    $fieldSource = FormFieldFactory::make($field);
+                }
+                if (is_array($fieldSource) && isset($fieldSource['type'])) {
+                    $fieldSource = FormFieldFactory::make($fieldSource);
+                }
+
+                if ($fieldSource !== null) {
+                    $fieldInput = is_object($fieldSource) && method_exists($fieldSource, 'compilate')
+                        ? $fieldSource->compilate()
+                        : (string) $fieldSource;
+                    if (is_object($fieldSource) && method_exists($fieldSource, 'getLoader')) {
+                        $fieldInput .= $fieldSource->getLoader();
+                    }
+                } elseif (!empty($field['html'])) {
+                    $fieldInput = (string) $field['html'];
+                } else {
+                    continue;
+                }
+
+                $fieldLabel = $field['label'] ?? '';
+                if ($fieldLabel === '' && is_object($fieldSource) && method_exists($fieldSource, 'getLabel')) {
+                    $fieldLabel = $fieldSource->getLabel();
+                }
+                $isRequired = !empty($field['required']) || strpos($fieldLabel, 'asterisk') !== false;
+                $fieldId = $field['id'] ?? ($field['name'] ?? '');
+                if ($fieldId === '' && is_object($fieldSource) && method_exists($fieldSource, 'getName')) {
+                    $fieldId = $fieldSource->getName();
+                }
+                $fieldName = $field['name'] ?? $fieldId;
+                $fieldWrapperId = $field['wrapper_id'] ?? '';
+                $fieldWrapperClass = trim(($field['class'] ?? '') . ' ' . ($field['className'] ?? '') . ' ' . ($field['wrapper_class'] ?? ''));
+                $fieldWrapperStyle = $field['wrapper_style'] ?? '';
+
+                // Tag visual para campos readonly/disabled (borda dotted, arredondada, tom azulado)
+                if (!empty($field['readonly']) || !empty($field['disabled'])) {
+                    $fieldWrapperClass .= ' ilu-form-compact__field--readonly';
+                }
+            } else {
+                continue;
+            }
+
+            if (stripos((string) $fieldLabel, 'asterisk') !== false) {
+                $isRequired = true;
+                $fieldLabel = preg_replace('/\s*<span[^>]*asterisk[^>]*>\s*\*\s*<\/span>\s*/i', '', (string) $fieldLabel);
+                $fieldLabel = trim((string) $fieldLabel);
+            }
+
+            $fieldVisibleWhen = '';
+            $fieldRequiredWhen = '';
+            $fieldDisabledWhen = '';
+            $fieldLabelWhen = '';
+            $fieldOptionsWhen = '';
+            $fieldMaskWhen = '';
+            $fieldValidateWhen = '';
+            $fieldFetchWhen = '';
+            $fieldRemoteValidateWhen = '';
+            $fieldSetValueWhen = '';
+            $fieldComputedWhen = '';
+            $fieldDynamicTable = '';
+            if (is_array($field)) {
+                if (!empty($field['__visible_when_json'])) {
+                    $fieldVisibleWhen = ' data-visible-when="' . htmlspecialchars($field['__visible_when_json']) . '"';
+                }
+                if (!empty($field['__required_when_json'])) {
+                    $fieldRequiredWhen = ' data-required-when="' . htmlspecialchars($field['__required_when_json']) . '"';
+                }
+                if (!empty($field['__disabled_when_json'])) {
+                    $fieldDisabledWhen = ' data-disabled-when="' . htmlspecialchars($field['__disabled_when_json']) . '"';
+                }
+                if (!empty($field['__label_when_json'])) {
+                    $fieldLabelWhen = ' data-label-when="' . htmlspecialchars($field['__label_when_json']) . '"';
+                }
+                if (!empty($field['__options_when_json'])) {
+                    $fieldOptionsWhen = ' data-options-when="' . htmlspecialchars($field['__options_when_json']) . '"';
+                }
+                if (!empty($field['__mask_when_json'])) {
+                    $fieldMaskWhen = ' data-mask-when="' . htmlspecialchars($field['__mask_when_json']) . '"';
+                }
+                if (!empty($field['__validate_when_json'])) {
+                    $fieldValidateWhen = ' data-validate-when="' . htmlspecialchars($field['__validate_when_json']) . '"';
+                }
+                if (!empty($field['__fetch_when_json'])) {
+                    $fieldFetchWhen = ' data-fetch-when="' . htmlspecialchars($field['__fetch_when_json']) . '"';
+                }
+                if (!empty($field['__remote_validate_when_json'])) {
+                    $fieldRemoteValidateWhen = ' data-remote-validate-when="' . htmlspecialchars($field['__remote_validate_when_json']) . '"';
+                }
+                if (!empty($field['__set_value_when_json'])) {
+                    $fieldSetValueWhen = ' data-set-value-when="' . htmlspecialchars($field['__set_value_when_json']) . '"';
+                }
+                if (!empty($field['__computed_when_json'])) {
+                    $fieldComputedWhen = ' data-computed-when="' . htmlspecialchars($field['__computed_when_json']) . '"';
+                }
+                if (!empty($field['__dynamic_table_json'])) {
+                    $fieldDynamicTable = ' data-dynamic-table-when="' . htmlspecialchars($field['__dynamic_table_json']) . '"';
+                }
+                if (!empty($field['__prevent_submit_json'])) {
+                    $fieldDynamicTable .= ' data-prevent-submit-when="' . htmlspecialchars($field['__prevent_submit_json']) . '"';
+                }
+                if (!empty($field['__revert_when_json'])) {
+                    $fieldDynamicTable .= ' data-revert-when="' . htmlspecialchars($field['__revert_when_json']) . '"';
+                }
+                if (!empty($field['__copy_when_json'])) {
+                    $fieldDynamicTable .= ' data-copy-when="' . htmlspecialchars($field['__copy_when_json']) . '"';
+                }
+                if (!empty($field['__password_policy_json'])) {
+                    $fieldDynamicTable .= ' data-password-when="' . htmlspecialchars($field['__password_policy_json']) . '"';
+                }
+            }
+            $suffixButtonHtml = '';
+            if (is_array($fieldConfig)) {
+                // Botões no final do campo (dentro do wrapper flex).
+                // Aceita 'suffix_button' (um) ou 'suffix_buttons' (vários) — escalável.
+                // Cada item pode ser um config de campo (ex.: ['type'=>'button',...])
+                // ou uma string de HTML cru.
+                $suffixBtns = [];
+                if (!empty($fieldConfig['suffix_buttons']) && is_array($fieldConfig['suffix_buttons'])) {
+                    $suffixBtns = $fieldConfig['suffix_buttons'];
+                } elseif (!empty($fieldConfig['suffix_button'])) {
+                    $suffixBtns = [$fieldConfig['suffix_button']];
+                }
+                foreach ($suffixBtns as $suffixBtnConfig) {
+                    if (is_string($suffixBtnConfig)) {
+                        $suffixButtonHtml .= $suffixBtnConfig;
+                        continue;
+                    }
+                    if (!is_array($suffixBtnConfig)) {
+                        continue;
+                    }
+                    if (!isset($suffixBtnConfig['type'])) {
+                        $suffixBtnConfig['type'] = 'button';
+                    }
+                    $suffixBtnField = FormFieldFactory::make($suffixBtnConfig);
+                    $suffixButtonHtml .= $suffixBtnField->compilate();
+                }
+            }
+            $fieldKeepSpace = (is_array($field) && !empty($field['keep_space'])) ? ' data-keep-space="true"' : '';
+            ?>
+            <div class="ilu-form-compact__field ilu-form-compact__field--col-<?=(int)$fieldCol; ?> <?=htmlspecialchars($fieldWrapperClass);?>"
+                 <?=$fieldWrapperId !== '' ? ' id="' . htmlspecialchars($fieldWrapperId, ENT_QUOTES, 'UTF-8') . '"' : '';?>
+                 <?=$fieldWrapperStyle !== '' ? ' style="' . htmlspecialchars($fieldWrapperStyle, ENT_QUOTES, 'UTF-8') . '"' : '';?>
+                 <?=$fieldVisibleWhen . $fieldRequiredWhen . $fieldDisabledWhen . $fieldLabelWhen . $fieldOptionsWhen . $fieldMaskWhen . $fieldValidateWhen . $fieldFetchWhen . $fieldRemoteValidateWhen . $fieldSetValueWhen . $fieldComputedWhen . $fieldDynamicTable . $fieldKeepSpace;?>>
+                <?php if (!empty($fieldLabel)): ?>
+                <label class="ilu-form-compact__label <?= $isRequired ? 'ilu-form-compact__label--required' : ''; ?>"
+                       for="<?=htmlspecialchars($fieldId);?>"
+                       data-label-default="<?= htmlspecialchars($fieldLabel); ?>">
+                    <?= $fieldLabel; ?>
+                </label>
+                <?php elseif (is_array($field) && ($field['type'] ?? '') === 'button'): ?>
+                <label class="ilu-form-compact__label" aria-hidden="true" style="visibility:hidden;">&nbsp;</label>
+                <?php endif; ?>
+                <div class="ilu-form-compact__input <?= !empty($suffixButtonHtml) ? 'ilu-form-input-wrap--with-suffix' : '' ?>">
+                    <?= $fieldInput; ?>
+                    <?php if (!empty($suffixButtonHtml)): ?>
+                        <?= $suffixButtonHtml; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endforeach; ?>
+
+    <?php if (!empty($buttons)): ?>
+    <div class="ilu-form-compact__actions">
+        <?php foreach ($buttons as $buttonKey => $button): ?>
+            <?php $btnHtml = fbCompactRenderButton($buttonKey, $button, $formName, $controller, $afterAction, $isAggregate); ?>
+            <?php if (!empty($btnHtml)): ?>
+                <?= $btnHtml; ?>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+</div>
+
+<?php if ($clearAfter): ?>
+<div style="clear: both"></div>
+<?php endif; ?>
+
+<?php
+$fieldScripts = [];
+foreach ($sections as $section) {
+    if (empty($section['fields'])) continue;
+    foreach ($section['fields'] as $field) {
+        if (is_object($field) && method_exists($field, 'getScript')) {
+            $fieldScripts[] = $field->getScript();
+        } elseif (is_array($field)) {
+            $fieldSource = $field['input'] ?? ($field['tag'] ?? ($field['field'] ?? null));
+            if ($fieldSource === null && isset($field['type'])) {
+                $fieldSource = FormFieldFactory::make($field);
+            }
+            if (is_array($fieldSource) && isset($fieldSource['type'])) {
+                $fieldSource = FormFieldFactory::make($fieldSource);
+            }
+            if (is_object($fieldSource) && method_exists($fieldSource, 'getScript')) {
+                $fieldScripts[] = $fieldSource->getScript();
+            }
+        }
+    }
+}
+?>
+<?php foreach ($fieldScripts as $script): ?>
+    <?php if (!empty($script)): ?>
+        <?=$script;?>
+    <?php endif; ?>
+<?php endforeach; ?>
+
+<?php if (!empty($afterHtml)): ?>
+<?=$afterHtml;?>
+<?php endif; ?>
+
+<?php if (!empty($tagForm)): ?>
+</form>
+<?php endif; ?>
+
+<?php if (!empty($afterScript)): ?>
+<?php if (strpos($afterScript, '<script') === false): ?>
+<script>
+<?=$afterScript;?>
+</script>
+<?php else: ?>
+<?=$afterScript;?>
+<?php endif; ?>
+<?php endif; ?>
+
+<?php
+$hasVisibility = $hasSteps || $clientBehaviorsJson !== '';
+foreach ($sections as $sec) {
+    if (!empty($sec['__visible_when_json'])) {
+        $hasVisibility = true;
+        break;
+    }
+    if (!empty($sec['fields'])) {
+        foreach ($sec['fields'] as $fld) {
+            if (!is_array($fld)) continue;
+            if (!empty($fld['__visible_when_json']) ||
+                !empty($fld['__required_when_json']) ||
+                !empty($fld['__disabled_when_json']) ||
+                !empty($fld['__label_when_json']) ||
+                !empty($fld['__options_when_json']) ||
+                !empty($fld['__mask_when_json']) ||
+                !empty($fld['__validate_when_json']) ||
+                !empty($fld['__fetch_when_json']) ||
+                !empty($fld['__remote_validate_when_json']) ||
+                !empty($fld['__set_value_when_json']) ||
+                !empty($fld['__computed_when_json']) ||
+                !empty($fld['__lock_when_json']) ||
+                !empty($fld['__prevent_submit_when_json']) ||
+                !empty($fld['__populate_when_json']) ||
+                !empty($fld['__copy_when_json']) ||
+                !empty($fld['__dynamic_table_json']) ||
+                !empty($fld['__password_policy_json']) ||
+                !empty($fld['__revert_when_json'])) {
+                $hasVisibility = true;
+                break 2;
+            }
+        }
+    }
+}
+foreach ($buttons as $btn) {
+    if (is_array($btn) && !empty($btn['__confirm_submit_json'])) {
+        $hasVisibility = true;
+        break;
+    }
+}
+
+if (!$hasVisibility && !empty($afterHtml) && strpos($afterHtml, 'data-visible-when') !== false) {
+    $hasVisibility = true;
+}
+
+$hasRepeater = false;
+foreach ($sections as $sec) {
+    foreach ($sec['fields'] ?? [] as $fld) {
+        if (is_array($fld) && isset($fld['type']) && strtolower((string) $fld['type']) === 'repeater') {
+            $hasRepeater = true;
+            break 2;
+        }
+    }
+}
+
+$activePlugins = [];
+if ($hasVisibility) {
+    if ($hasSteps) {
+        $activePlugins[] = 'step';
+    }
+    if ($clientBehaviorsJson !== '') {
+        $activePlugins[] = 'behavior';
+    }
+    foreach ($sections as $sec) {
+        foreach ($sec['fields'] as $fld) {
+            if (!is_array($fld)) continue;
+            if (!empty($fld['__options_when_json'])) $activePlugins[] = 'options';
+            if (!empty($fld['__mask_when_json'])) $activePlugins[] = 'mask';
+            if (!empty($fld['__validate_when_json'])) $activePlugins[] = 'validate';
+            if (!empty($fld['__fetch_when_json'])) $activePlugins[] = 'fetch';
+            if (!empty($fld['__remote_validate_when_json'])) $activePlugins[] = 'remote-validate';
+            if (!empty($fld['__set_value_when_json'])) $activePlugins[] = 'set-value';
+            if (!empty($fld['__computed_when_json'])) $activePlugins[] = 'computed';
+            if (!empty($fld['__lock_when_json'])) $activePlugins[] = 'lock';
+            if (!empty($fld['__prevent_submit_when_json'])) $activePlugins[] = 'prevent-submit';
+            if (!empty($fld['__populate_when_json'])) $activePlugins[] = 'populate';
+            if (!empty($fld['__copy_when_json'])) $activePlugins[] = 'copy';
+            if (!empty($fld['__revert_when_json'])) $activePlugins[] = 'revert';
+            if (!empty($fld['__dynamic_table_json'])) $activePlugins[] = 'dynamic-table';
+            if (!empty($fld['__password_policy_json'])) $activePlugins[] = 'password';
+        }
+    }
+    foreach ($buttons as $btn) {
+        if (is_array($btn) && !empty($btn['__confirm_submit_json'])) $activePlugins[] = 'confirm-submit';
+    }
+    if (!empty($__submit_handler_json)) $activePlugins[] = 'submit-handler';
+    // Gating sequencial (form-rule-sequence). Varredura RECURSIVA porque a config
+    // aninha campos em cards/grupos e o laco acima le um nivel so. Nao da para
+    // registrar incondicionalmente: $activePlugins vazio e o que faz o form cair
+    // no form-visibility.js legado, e forcar o ramo v2 recarrega engine+plugins
+    // por cima dos ja carregados pela pagina -> "redeclaration of let FormRule*".
+    $iluTemSequence = function ($nos) use (&$iluTemSequence) {
+        foreach ((array) $nos as $no) {
+            if (!is_array($no)) { continue; }
+            if (!empty($no['properties']['data-sequence'])) { return true; }
+            foreach (['fields', 'sections', 'children', 'components'] as $k) {
+                if (!empty($no[$k]) && $iluTemSequence($no[$k])) { return true; }
+            }
+        }
+        return false;
+    };
+    if ($iluTemSequence($sections)) { $activePlugins[] = 'sequence'; }
+    $activePlugins = array_unique($activePlugins);
+    if ($hasRepeater) $activePlugins[] = 'repeater-init';
+}
+?>
+<?php if ($hasVisibility && $loadRuleAssets): ?>
+    <script src="<?=SYSPATH;?>layout/js/form-rule-engine.js?v=2.26"></script>
+    <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-base.js?v=2.26"></script>
+    <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-visible.js?v=2.26"></script>
+    <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-required.js?v=2.26"></script>
+    <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-disabled.js?v=2.26"></script>
+    <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-label.js?v=2.26"></script>
+    <?php foreach ($activePlugins as $plugin): ?>
+        <script src="<?=SYSPATH;?>layout/js/plugins/form-rule-<?=$plugin;?>.js?v=2.26"></script>
+    <?php endforeach; ?>
+    <script src="<?=SYSPATH;?>layout/js/form-visibility-v2.js?v=2.26"></script>
+<?php endif; ?>
+<?php if ($hasRepeater && $loadRuleAssets): ?>
+    <script src="<?=SYSPATH;?>layout/js/form-rule-repeater.js?v=1.4"></script>
+<?php endif; ?>
+<?php if ($hasRepeater): ?>
+    <script>
+    (function() {
+        if (typeof IluRepeater !== 'undefined') {
+            IluRepeater.initAll();
+        }
+    })();
+    </script>
+<?php endif; ?>
+<script>
+(function() {
+    // Filtra as options do select pelo texto digitado
+    function filterSelect(input) {
+        var wrap = input.closest('.ilu-select-busca');
+        if (!wrap) return;
+        var sel = wrap.querySelector('select.ilu-select-busca__select');
+        if (!sel) return;
+        var q = (input.value || '').toLowerCase();
+        var opts = sel.options;
+        for (var i = 0; i < opts.length; i++) {
+            var hide = q.length > 0 && opts[i].text.toLowerCase().indexOf(q) < 0;
+            opts[i].hidden = hide;
+            opts[i].style.display = hide ? 'none' : '';
+        }
+    }
+
+    // Vincula direto no input de busca (idempotente por elemento)
+    function initSB(input) {
+        if (!input || input.dataset.sbBound === '1') return;
+        input.dataset.sbBound = '1';
+        input.addEventListener('input', function() { filterSelect(input); });
+        input.addEventListener('click', function() { input.select(); });
+    }
+
+    // Em multi-select: clicar alterna a seleção sem precisar de Ctrl/Cmd
+    function initToggle(sel) {
+        if (!sel || sel.dataset.sbToggle === '1' || !sel.multiple) return;
+        sel.dataset.sbToggle = '1';
+        sel.addEventListener('mousedown', function(e) {
+            var opt = e.target;
+            if (!opt || opt.tagName !== 'OPTION') return;
+            e.preventDefault();
+            opt.selected = !opt.selected;
+            sel.focus();
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    function initAll(root) {
+        var scope = root || document;
+        var inputs = scope.querySelectorAll('.ilu-select-busca__search');
+        for (var i = 0; i < inputs.length; i++) initSB(inputs[i]);
+        var selects = scope.querySelectorAll('select.ilu-select-busca__select');
+        for (var j = 0; j < selects.length; j++) initToggle(selects[j]);
+    }
+
+    // Carga inicial (drawer/form já presentes neste render)
+    initAll(document);
+
+    // Novas linhas do repeater
+    if (!window.__iluSBrepeaterHook) {
+        window.__iluSBrepeaterHook = 1;
+        document.addEventListener('ilu:repeater:row-added', function(e) {
+            var row = e.detail && e.detail.row ? e.detail.row : document;
+            initAll(row);
+        });
+    }
+})();
+</script>
