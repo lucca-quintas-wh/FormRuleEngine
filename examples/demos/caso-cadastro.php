@@ -1,6 +1,6 @@
 <?php
 /**
- * Cadastro de cliente — o formulário "pão com manteiga".
+ * Cadastro de cliente, o formulário "pão com manteiga".
  *
  * Mostra as regras de campo que não precisam de servidor:
  *   visible_when · required_when · disabled_when · label_when · options_when
@@ -116,7 +116,7 @@ return [
                 ],
 
                 /* Inscrição estadual: obrigatória para PJ, exceto quando
-                   marcada como isenta — e nesse caso fica desabilitada. */
+                   marcada como isenta, e nesse caso fica desabilitada. */
                 [
                     'name'           => 'IsentoIe',
                     'type'           => 'checkbox',
@@ -206,7 +206,7 @@ return [
 
                 /* Cadeia de cálculo em DOIS wrappers, de propósito: pôr as duas
                    regras no mesmo atributo faria `Subtotal` virar dependência do
-                   próprio elemento que o escreve — laço infinito. */
+                   próprio elemento que o escreve, laço infinito. */
                 [
                     'name' => 'Subtotal', 'label' => 'Subtotal', 'type' => 'text',
                     'col' => 3, 'readonly' => true,
@@ -231,7 +231,7 @@ return [
 
                 /* Cópia CRUA do subtotal, sem formatação.
                    Motivo: os comparadores numéricos da DSL usam parseFloat, e
-                   parseFloat("1.234,56") devolve 1.234 — o ponto vira decimal.
+                   parseFloat("1.234,56") devolve 1.234: o ponto vira decimal.
                    Um campo formatado serve para MOSTRAR; para COMPARAR, mantenha
                    a versão crua. É barato: um hidden e uma regra. */
                 [
@@ -256,7 +256,7 @@ return [
                         'fields'    => ['Aprovador'],
                         'message'   => 'Pedidos acima de R$ 1.000 exigem aprovador.',
                     ],
-                    'hint' => 'Obrigatório acima de R$ 1.000 — bloqueia o envio se vazio.',
+                    'hint' => 'Obrigatório acima de R$ 1.000: bloqueia o envio se vazio.',
                 ],
             ],
         ],
@@ -273,7 +273,7 @@ return [
         [
             'label' => 'Excluir',
             'type'  => 'button',
-            // Só existe em modo de edição — parâmetro do formulário, não campo.
+            // Só existe em modo de edição: parâmetro do formulário, não campo.
             'visible_when'   => ['form_param_modo' => 'edicao'],
             'confirm_submit' => [
                 'message' => 'Excluir este cadastro? A ação não pode ser desfeita.',

@@ -3,7 +3,7 @@
   <h1><code>action_when</code> · <code>trigger_when</code></h1>
   <p class="lead">
     Dois plugins pequenos: um controla botões, o outro dispara eventos em outros
-    campos. O segundo tem um defeito confirmado — está documentado abaixo, com o
+    campos. O segundo tem um defeito confirmado: está documentado abaixo, com o
     conserto.
   </p>
   <span class="deps">Dependências: <strong>nenhuma</strong> (action) · <strong>jQuery</strong> (trigger)</span>
@@ -22,7 +22,7 @@
 
   <div class="note">
     <p>
-      As duas chaves são independentes: um botão pode estar visível e desabilitado —
+      As duas chaves são independentes: um botão pode estar visível e desabilitado
       o usuário vê que a ação existe, mas não pode executá-la agora. Costuma ser
       melhor UX do que fazer o botão sumir sem explicação.
     </p>
@@ -32,7 +32,7 @@
   <p>
     <code>trigger_when</code> observa um campo e, quando a condição vale, dispara um
     evento em <strong>outros</strong> campos. Serve para acordar um
-    <code>fetch_when</code> vizinho depois que um valor é escrito por código —
+    <code>fetch_when</code> vizinho depois que um valor é escrito por código
     situação em que o <code>change</code> natural não acontece.
   </p>
 
@@ -48,39 +48,52 @@
     <table>
       <tr><th>Chave</th><th>Descrição</th></tr>
       <tr><td><code>condition</code></td><td>Opcional. Sem ela, dispara sempre que o campo muda.</td></tr>
-      <tr><td><code>fire</code></td><td>Lista de alvos: <code>['field' =&gt; …, 'event' =&gt; …, 'delay' =&gt; …]</code> — ou só a string com o nome do campo.</td></tr>
+      <tr><td><code>fire</code></td><td>Lista de alvos: <code>['field' =&gt; …, 'event' =&gt; …, 'delay' =&gt; …]</code>, ou só a string com o nome do campo.</td></tr>
       <tr><td><code>event</code></td><td>Padrão <code>change</code>.</td></tr>
       <tr><td><code>delay</code></td><td>Milissegundos antes de disparar. Útil quando o alvo ainda está sendo repopulado.</td></tr>
     </table>
   </div>
 
-  <div class="warn">
-    <p><strong>Este plugin não funciona na versão atual.</strong></p>
-    <p>
-      Em <code>src/plugins/form-rule-trigger.js:49</code>, o alvo é resolvido com
-      <code>this.findInput(targetField)</code> — mas <code>targetField</code> é uma
-      <em>string</em> (o nome do campo), e <code>findInput()</code> espera um elemento
-      do DOM, porque só faz <code>element.querySelector(…)</code>. O resultado é
-      <code>TypeError: element.querySelector is not a function</code> dentro do handler
-      de <code>change</code>, e o evento nunca chega ao alvo.
-    </p>
-    <p>
-      Verificado em jsdom com um formulário mínimo: a exceção sobe e o campo alvo
-      recebe zero eventos. Por isso não há demonstração ao vivo nesta seção — não
-      faria sentido mostrar algo que só produz erro no console.
-    </p>
-    <p><strong>O conserto</strong> é trocar a linha por uma busca por nome:</p>
-    <pre><code>// antes
-const el = this.findInput(targetField);
+  <?= fre_demo('11-gatilhos') ?>
 
-// depois
-const el = this.engine.form.querySelector(`[name="${targetField}"]`);</code></pre>
+  <div class="note">
     <p>
-      Enquanto isso não entra, o mesmo efeito se obtém com a ação <code>trigger</code>
-      dentro de <code>on_success</code> de um <code>fetch_when</code>, ou com
-      <code>chain</code> do <code>populate_when</code> — os dois caminhos disparam o
-      evento pelo nome do campo e estão exercitados nas páginas
-      <a href="?p=08-fetch-cascata">08</a> e <a href="?p=09-populate">09</a>.
+      <strong>Esteve quebrado, e vale saber por quê.</strong> Em
+      <code>form-rule-trigger.js</code> o alvo era resolvido com
+      <code>findInput(targetField)</code>, mas <code>targetField</code> é o
+      <em>nome</em> do campo e <code>findInput()</code> espera um elemento do DOM,
+      porque só faz <code>element.querySelector(…)</code>. O resultado era
+      <code>TypeError: element.querySelector is not a function</code> dentro do
+      handler de <code>change</code>: a exceção subia e o evento nunca chegava ao
+      alvo.
+    </p>
+    <p>
+      Hoje a resolução é por <code>form.querySelector('[name=…]')</code>, e o caso
+      está fixado em <code>tests/falhas-silenciosas.js</code>. Vale como lembrete de
+      que um <code>TypeError</code> dentro de um handler é, para o usuário, a
+      mesma coisa que silêncio.
+    </p>
+  </div>
+
+  <div class="warn">
+    <p>
+      <strong>O evento sai pelo barramento do jQuery.</strong> O plugin dispara com
+      <code>$.trigger()</code>, que executa apenas os handlers registrados via
+      jQuery: um <code>addEventListener</code> comum <strong>não</strong> vê esse
+      evento. As regras da engine veem, porque o núcleo mantém uma ponte para esse
+      barramento, mas o seu código não verá se escutar pelo nativo. O contador
+      abaixo do exemplo escuta com <code>$(campo).on('change', …)</code> por essa
+      razão.
+    </p>
+  </div>
+
+  <div class="tip">
+    <p>
+      Ainda assim, quando o gatilho vem <em>depois de uma resposta do servidor</em>,
+      prefira a ação <code>trigger</code> dentro de <code>on_success</code> do
+      <code>fetch_when</code> ou do <code>chain</code> do <code>populate_when</code>:
+      ali a ordem em relação ao preenchimento é garantida, enquanto o
+      <code>trigger_when</code> reage ao evento do campo.
     </p>
   </div>
 
@@ -103,7 +116,7 @@ const el = this.engine.form.querySelector(`[name="${targetField}"]`);</code></pr
       <tr><td><code>message_by_response</code></td><td><code>[path, equals, message|message_path, type]</code></td><td>Mensagem condicionada ao conteúdo da resposta.</td></tr>
       <tr><td><code>show_message</code></td><td><code>[type, message]</code></td><td>Mensagem direta.</td></tr>
       <tr><td><code>clear</code></td><td><code>'Campo'</code> ou lista</td><td>Limpa campos.</td></tr>
-      <tr><td><code>trigger</code></td><td><code>'Campo'</code></td><td>Dispara <code>change</code> no campo — a alternativa funcional ao <code>trigger_when</code>.</td></tr>
+      <tr><td><code>trigger</code></td><td><code>'Campo'</code></td><td>Dispara <code>change</code> no campo, a alternativa funcional ao <code>trigger_when</code>.</td></tr>
       <tr><td><code>call</code></td><td><code>['call' =&gt; 'fn', 'args' =&gt; [...]]</code></td><td>Chama <code>window.fn(...)</code>, se existir. Os args passam pelo template.</td></tr>
       <tr><td><code>conditional</code></td><td><code>[condition, then, else]</code></td><td>Ramifica usando a DSL. Aninhável.</td></tr>
     </table>
@@ -113,4 +126,24 @@ const el = this.engine.form.querySelector(`[name="${targetField}"]`);</code></pr
 
   <?= fre_demo('11-acoes') ?>
 
-<?php fre_pagina_fim(['form_estado' => 'formAcoesBotao']); ?>
+<?php fre_pagina_fim(['form_estado' => 'formGatilhos', 'script' => <<<'JS'
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var contador = document.getElementById('contadorGatilhos');
+  var n = 0;
+  ['Municipio', 'Bairro'].forEach(function (nome) {
+    var campo = document.querySelector('form[name="formGatilhos"] [name="' + nome + '"]');
+    if (!campo) return;
+    // Escutamos pelo jQuery, não por addEventListener: o plugin dispara com
+    // $.trigger(), que percorre só o barramento do jQuery. É a mesma assimetria
+    // que faz o núcleo manter uma ponte separada para esse barramento.
+    window.$(campo).on('change', function () {
+      n++;
+      contador.textContent = n + ' evento(s) recebido(s); o último em ' + nome;
+      Demo.log('trigger_when → change em ' + nome);
+    });
+  });
+});
+</script>
+JS
+]); ?>

@@ -34,7 +34,7 @@ return [
                 'visible_when' => ['TemDependentes' => 'S'],
                 'keep_space'   => true,   // esconde com visibility, não display
                 'demo_name'    => 'aviso (reserva espaço)',
-                'html'         => '<p class="hint">Este bloco reserva o próprio espaço mesmo quando oculto — o layout não pula.</p>',
+                'html'         => '<p class="hint">Este bloco reserva o próprio espaço mesmo quando oculto: o layout não pula.</p>',
             ],
         ],
     ]],

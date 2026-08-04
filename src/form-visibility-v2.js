@@ -25,7 +25,7 @@
 
             form.dataset.formVisibilityV2Initialized = 'true';
 
-            // Registra plugins (ordem importa para dependências)
+            // Registra plugins (order importa para dependências)
             registerPluginIfAvailable(engine, 'visible', 'FormRuleVisiblePlugin');
             registerPluginIfAvailable(engine, 'required', 'FormRuleRequiredPlugin');
             registerPluginIfAvailable(engine, 'disabled', 'FormRuleDisabledPlugin');
@@ -79,6 +79,11 @@
                 }
                 engine.addElement(el, 'visible');
             });
+
+            // Diagnóstico: só quando pedido, porque percorre todas as regras.
+            if (window.FormRuleEngine.debug || form.dataset.formDebug === 'true') {
+                engine.diagnose();
+            }
 
             // Notifica middlewares (ex: aggregate tabs fora do form) que o engine está pronto
             form.dispatchEvent(new CustomEvent('form-rule-engine:ready', {

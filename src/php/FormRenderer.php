@@ -1,6 +1,6 @@
 <?php
 /**
- * FormRenderer — o gerador de formulários.
+ * FormRenderer, o gerador de formulários.
  *
  * Você passa um array de configuração e recebe o formulário pronto: seções,
  * grid de 12 colunas, rótulos, controles e os atributos `data-*-when` que o
@@ -30,7 +30,7 @@
  * <div> WRAPPER do campo, nunca no <input>. Os plugins procuram o controle com
  * `element.querySelector('input, select, textarea')`, então atributo no próprio
  * input não é encontrado e a regra falha em silêncio. O gerador acerta o lugar
- * sempre — é por isso que a armadilha nunca apareceu no projeto de origem.
+ * sempre, é por isso que a armadilha nunca apareceu no projeto de origem.
  *
  * @see FormRuleCompiler  a tradução config → data-*-when
  * @see reference/php/FormRenderer.php  o equivalente acoplado ao framework de origem
@@ -178,36 +178,19 @@ final class FormRenderer
     /**
      * Atributos de regra do campo, que vão no WRAPPER.
      *
-     * Contorno de um defeito confirmado do compilador: `label_when` está na lista
-     * de condições puras, mas o formato que o plugin `label` espera é uma LISTA
-     * de objetos com a chave `label` — e lista sequencial vira `{"AND":[…]}` no
-     * normalizador. O plugin receberia objeto onde espera array, cairia no ramo
-     * de condição simples, e o rótulo nunca mudaria: falha silenciosa, da mesma
-     * família da pertinência com 2 valores. Enquanto o roadmap não decide, a
-     * forma de lista é emitida como JSON cru; condição simples segue pelo compilador.
+     * A tradução é toda do FormRuleCompiler; aqui só se acrescentam os
+     * modificadores que o plugin `visible` lê do dataset do elemento.
      */
     public static function ruleAttrs(array $field): string
     {
-        $labelEmLista = isset($field['label_when'])
-            && is_array($field['label_when'])
-            && array_key_exists(0, $field['label_when']);
+        $html = FormRuleCompiler::atributos($field);
 
-        $paraCompilador = $field;
-        if ($labelEmLista) {
-            unset($paraCompilador['label_when']);
-        }
-
-        $html = FormRuleCompiler::atributos($paraCompilador);
-
-        if ($labelEmLista) {
-            $html .= " data-label-when='" . self::e(self::json($field['label_when'])) . "'";
-        }
-
-        // Modificadores do plugin `visible`, lidos do dataset do próprio elemento.
         $html .= self::attrs([
             'data-animate'       => (isset($field['animate']) && $field['animate'] === false) ? 'false' : null,
             'data-keep-space'    => !empty($field['keep_space']) ? 'true' : null,
             'data-clear-on-hide' => !empty($field['clear_on_hide']) ? 'true' : null,
+            // Só para o painel de eventos das páginas de exemplo dar um nome ao
+            // elemento. Não tem efeito nenhum no runtime.
             'data-demo-name'     => $field['demo_name'] ?? null,
         ]);
 
@@ -275,7 +258,7 @@ final class FormRenderer
 
             case 'checkbox':
                 /* `value` explícito e sempre: sem ele o navegador usa "on" como
-                   padrão, e `getFieldValue()` — que faz `field.value || 'S'` —
+                   padrão, e `getFieldValue()`, que faz `field.value || 'S'`
                    devolve "on". A condição {"Campo":"S"} então nunca casa, em
                    silêncio. É a razão de a armadilha não aparecer no projeto de
                    origem: o gerador sempre emitiu o value. */
@@ -316,7 +299,7 @@ final class FormRenderer
         $type = $field['type'] ?? 'text';
 
         /* Grupo: propaga a condição para cada campo filho. Não existe "wrapper de
-           grupo" no HTML final — cada campo carrega a regra. É o motivo de você
+           grupo" no HTML final, cada campo carrega a regra. É o motivo de você
            ver a mesma condição repetida em campos vizinhos. */
         if ($type === 'group') {
             $html = '';
@@ -332,7 +315,7 @@ final class FormRenderer
             return $html;
         }
 
-        // Bloco de HTML cru dentro da grid — para markup que não é campo.
+        // Bloco de HTML cru dentro da grid, para markup que não é campo.
         if ($type === 'raw') {
             $col = (int) ($field['col'] ?? 12);
 
@@ -340,7 +323,7 @@ final class FormRenderer
                  . self::ruleAttrs($field) . '>' . ($field['html'] ?? '') . '</div>';
         }
 
-        // Hidden não tem wrapper visível — mas ainda pode carregar regra, então o
+        // Hidden não tem wrapper visível, mas ainda pode carregar regra, então o
         // wrapper existe sem classe de coluna quando há regra a pendurar.
         if ($type === 'hidden') {
             $regras = self::ruleAttrs($field);
@@ -363,7 +346,7 @@ final class FormRenderer
 
         $html = '<div class="' . self::e($classes) . '"' . ($noInput ? '' : self::ruleAttrs($field)) . '>';
 
-        // O rótulo precisa da classe `ilu-form-label` — é por ela que os plugins
+        // O rótulo precisa da classe `ilu-form-label`, é por ela que os plugins
         // `required` (asterisco) e `label` (troca de texto) o encontram.
         if ($type !== 'checkbox' && !empty($field['label'])) {
             $html .= '<label class="ilu-form-label"'

@@ -2,7 +2,7 @@
 /**
  * runActions() ao vivo, sem depender de AJAX.
  *
- * O truque: um `confirm_submit` SEM `message` não abre diálogo nenhum — só
+ * O truque: um `confirm_submit` SEM `message` não abre diálogo nenhum, só
  * executa a lista de ações. É a forma mais curta de pendurar ações num botão.
  */
 

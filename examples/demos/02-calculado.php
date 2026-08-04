@@ -3,7 +3,7 @@
  * Uma regra dependendo de um campo que OUTRO plugin escreve.
  *
  * `setFieldValue()` dispara `change` ao gravar, então o encadeamento acontece
- * sozinho — não há ordem de registro para acertar.
+ * sozinho, não há ordem de registro para acertar.
  */
 
 return [

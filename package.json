@@ -2,13 +2,16 @@
   "name": "form-rule-engine",
   "version": "0.0.0",
   "private": true,
-  "description": "Motor declarativo de comportamento de formulário para projetos legados — regras como atributos HTML.",
+  "description": "Motor declarativo de comportamento de formulário para projetos legados: regras como atributos HTML.",
+  "license": "MIT",
+  "author": "Lucca Quintas",
   "scripts": {
-    "test": "node tests/smoke.js && node tests/cross-php-js.js && node tests/gerador-e2e.js && php tests/paridade-php.php",
+    "test": "node tests/smoke.js && node tests/falhas-silenciosas.js && node tests/cross-php-js.js && node tests/gerador-e2e.js && php tests/paridade-php.php",
     "test:js": "node tests/smoke.js",
     "test:cross": "node tests/cross-php-js.js",
     "test:gerador": "node tests/gerador-e2e.js",
-    "test:php": "php tests/paridade-php.php"
+    "test:php": "php tests/paridade-php.php",
+    "test:falhas": "node tests/falhas-silenciosas.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

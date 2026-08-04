@@ -3,13 +3,13 @@
  * Wizard: cada seção vira uma etapa.
  *
  * O plugin `step` lê a configuração do VALUE de campos ocultos marcados com
- * data-step-config e data-step-rules — o inverso do `sequence`, que lê o
+ * data-step-config e data-step-rules: o inverso do `sequence`, que lê o
  * atributo. O emissor cuida da diferença.
  *
  * `skip` usa um formato próprio, mais simples que a DSL: `when` é um mapa
  * campo → LISTA de valores, e a etapa é pulada quando o valor atual está na
  * lista. Não aceita AND/OR nem operadores. Para lógica mais rica, esconda a
- * seção com visible_when — o plugin trata etapa escondida como inexistente.
+ * seção com visible_when: o plugin trata etapa escondida como inexistente.
  */
 
 return [
@@ -77,7 +77,7 @@ return [
             ],
         ],
     ],
-    /* `data-step-only` funciona inclusive FORA do formulário — o plugin
+    /* `data-step-only` funciona inclusive FORA do formulário: o plugin
        re-consulta o documento a cada mudança de etapa. Nasceu de um botão que
        só faz sentido na etapa de dados pessoais. */
     'after_form' =>

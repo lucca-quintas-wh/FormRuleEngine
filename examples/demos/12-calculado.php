@@ -3,7 +3,7 @@
  * Campo calculado dentro da fila.
  *
  * `sequence_keep` protege o valor da limpeza a jusante. O caso real: a data de
- * nascimento calcula a faixa etária, e a faixa vem DEPOIS dela na fila — sem a
+ * nascimento calcula a faixa etária, e a faixa vem DEPOIS dela na fila, sem a
  * marca, a limpeza dos posteriores apagaria, um instante depois, o valor que a
  * regra de cálculo acabou de escrever.
  */

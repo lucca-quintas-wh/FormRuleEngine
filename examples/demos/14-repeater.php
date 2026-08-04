@@ -4,7 +4,7 @@
  *
  * A engine monta o mapa de dependências no registro do plugin, varrendo o DOM
  * daquele momento. Uma linha adicionada depois traz atributos data-*-when que
- * ninguém leu — as regras dela simplesmente não existem.
+ * ninguém leu, as regras dela simplesmente não existem.
  *
  * O plugin `repeater-init` escuta `ilu:repeater:row-added` (que borbulha até o
  * document) e chama engine.addElement() para cada elemento com regra dentro da
@@ -23,8 +23,8 @@ return [
                         . '<p style="margin-top:12px"><button type="button" id="btnAddDependente">'
                         . '+ Adicionar dependente</button></p>'
                         . '<p class="hint">Cada linha tem um <code>data-visible-when</code> próprio. '
-                        . 'Adicione uma e troque o parentesco para "Filho(a)": o campo de idade aparece — '
-                        . 'prova de que a regra foi registrada depois da carga.</p>',
+                        . 'Adicione uma e troque o parentesco para "Filho(a)": o campo de idade aparece. '
+                        . 'É a prova de que a regra foi registrada depois da carga.</p>',
             ],
         ],
     ]],

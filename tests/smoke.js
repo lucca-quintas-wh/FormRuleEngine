@@ -81,7 +81,7 @@ const check = (label, got, want) => {
 // A engine inicializou?
 check('engine registrada no form', $('form').dataset.formVisibilityV2Initialized, 'true');
 
-// 1. visibilidade condicional — estado inicial (TipoPessoa=F)
+// 1. visibilidade condicional, estado inicial (TipoPessoa=F)
 check('CPF visível com TipoPessoa=F', hidden($('#boxCpf')), 'false');
 check('CNPJ oculto com TipoPessoa=F', hidden($('#boxCnpj')), 'true');
 check('CPF obrigatório com TipoPessoa=F', field('Cpf').required, 'true');

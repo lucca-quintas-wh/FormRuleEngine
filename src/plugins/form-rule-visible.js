@@ -21,8 +21,8 @@ window.FormRuleVisiblePlugin = window.FormRuleVisiblePlugin || class FormRuleVis
         const keepSpace = element.dataset.keepSpace === 'true';
         
         if (show) {
-            element.classList.remove('is-hidden', 'form-rule-hidden');
-            if (element.classList.contains('form-step-hidden')) {
+            element.classList.remove(this.tema('hiddenLegacy'), this.tema('hidden'));
+            if (element.classList.contains(this.tema('stepHidden'))) {
                 element.style.display = 'none';
                 return;
             }
@@ -41,7 +41,7 @@ window.FormRuleVisiblePlugin = window.FormRuleVisiblePlugin || class FormRuleVis
                 element.style.display = '';
             }
         } else {
-            element.classList.add('is-hidden', 'form-rule-hidden');
+            element.classList.add(this.tema('hiddenLegacy'), this.tema('hidden'));
             
             if (keepSpace) {
                 element.style.visibility = 'hidden';

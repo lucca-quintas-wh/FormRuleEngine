@@ -43,7 +43,7 @@
   </div>
   <p>
     O segundo caso existe porque nem sempre esconder é o certo: mostrar o campo travado
-    comunica "isto existe, mas não no seu caso" — enquanto sumir com ele deixa o
+    comunica "isto existe, mas não no seu caso", enquanto sumir com ele deixa o
     usuário sem entender o que aconteceu.
   </p>
 
@@ -52,7 +52,7 @@
     <table>
       <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
       <tr><td><code>clear_downstream</code></td><td><code>true</code></td><td>Limpa o valor dos passos posteriores quando um passo muda.</td></tr>
-      <tr><td><code>warn_on_empty</code></td><td>—</td><td>Mensagem exibida quando o usuário <em>esvazia</em> um passo.</td></tr>
+      <tr><td><code>warn_on_empty</code></td><td>sem padrão</td><td>Mensagem exibida quando o usuário <em>esvazia</em> um passo.</td></tr>
       <tr><td><code>always_enabled</code></td><td><code>[]</code></td><td>Nomes de campos fora da fila que ficam sempre liberados.</td></tr>
       <tr><td><code>active_when</code></td><td>sempre</td><td>Condição da DSL: só aplica o travamento quando verdadeira.</td></tr>
     </table>
@@ -71,7 +71,7 @@
   <div class="warn">
     <p>
       <strong>Atenção ao lugar do atributo.</strong> Este é o único plugin cujos
-      atributos vão no <em>controle</em>, e não no wrapper — porque ele varre
+      atributos vão no <em>controle</em>, e não no wrapper, porque ele varre
       <code>[data-sequence]</code> e lê o <code>value</code> do elemento que encontra.
       E a configuração da fila vem do <strong>atributo</strong> de um hidden, enquanto
       a do wizard vem do <strong>value</strong>. São opostos, e confundir os dois é o
@@ -95,7 +95,7 @@
   <h3>Por que distinguir ação humana de mudança programática</h3>
   <p>
     O aviso de <code>warn_on_empty</code> só aparece em ação do usuário. Cascatas
-    repopulam combos e avisam a mudança com valor vazio — sem esse filtro, o alerta
+    repopulam combos e avisam a mudança com valor vazio: sem esse filtro, o alerta
     pipocaria a cada recarga de opção. A distinção é a presença de
     <code>originalEvent</code>: eventos nascidos no navegador o têm, um
     <code>$.trigger('change')</code> programático não.
@@ -104,7 +104,7 @@
   <h3>Por que a limpeza não dispara <code>change</code></h3>
   <p>
     Limpar cinco campos disparando <code>change</code> em cada um acionaria em cadeia
-    as cascatas de todos eles — cinco requisições para jogar fora. O plugin limpa o
+    as cascatas de todos eles, cinco requisições para jogar fora. O plugin limpa o
     valor em silêncio e reavalia a fila uma vez só.
   </p>
 
@@ -113,7 +113,7 @@
       <strong>Por isso, cuidado ao combinar com regras que leem esses campos.</strong>
       Como a limpeza é silenciosa, um <code>visible_when</code> que dependa de um campo
       limpo <em>não</em> reavalia sozinho. Se precisar, chame
-      <code>window.formVisibilityManager.refresh()</code> depois — ou não confie na
+      <code>window.formVisibilityManager.refresh()</code> depois, ou não confie na
       limpeza para dirigir visibilidade.
     </p>
   </div>

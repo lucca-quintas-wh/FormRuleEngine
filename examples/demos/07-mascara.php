@@ -1,6 +1,6 @@
 <?php
 /**
- * Máscara condicional — o caso clássico: o mesmo campo recebe CPF ou CNPJ.
+ * Máscara condicional. O caso clássico: o mesmo campo recebe CPF ou CNPJ.
  * A máscara é reaplicada apenas quando MUDA: o plugin lembra a última aplicada
  * por input e sai cedo se for a mesma.
  */

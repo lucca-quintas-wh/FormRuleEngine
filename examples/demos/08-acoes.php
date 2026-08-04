@@ -1,6 +1,6 @@
 <?php
 /**
- * on_success aceita a mesma lista de ações de runActions() — a mesma que
+ * on_success aceita a mesma lista de ações de runActions(), a mesma que
  * on_fail, on_empty e confirm_submit usam.
  *
  * Nos templates, {response} é a resposta inteira e {response.campo.sub} navega

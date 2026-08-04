@@ -4,7 +4,7 @@
  * de ações no formulário, executadas em ordem depois do `map`.
  *
  *   set_value  field + value (fixo) ou path (da resposta)
- *   trigger    dispara um evento num campo — acorda um fetch_when vizinho
+ *   trigger    dispara um evento num campo, acorda um fetch_when vizinho
  *   refresh    engine.evaluateAll(): reavalia todas as regras
  *
  * Códigos de lead que existem no api.php: 1 e 2.

@@ -5,7 +5,7 @@
  * Sem `?p=`, mostra o índice. Com, inclui a view correspondente.
  *
  * Por que um controller em vez de abrir `01-visibilidade.phtml` direto: o
- * servidor embutido do PHP (`php -S`) só executa `.php` — um `.phtml` requisitado
+ * servidor embutido do PHP (`php -S`) só executa `.php`, um `.phtml` requisitado
  * diretamente sairia como texto. E, no projeto de origem, `.phtml` sempre foi
  * *view partial* renderizada por um controller, nunca ponto de entrada. As duas
  * razões apontam para o mesmo desenho.
@@ -34,7 +34,7 @@ if ($slug !== null) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Form Rule Engine — exemplos</title>
+<title>Form Rule Engine, exemplos</title>
 <link rel="stylesheet" href="assets/demo.css">
 </head>
 <body>
@@ -52,8 +52,8 @@ if ($slug !== null) {
   <p class="lead">
     Uma página por assunto, cada uma rodando de verdade no navegador. Nenhum
     exemplo é HTML escrito à mão: cada um é uma <strong>configuração PHP</strong>
-    compilada pelo <code>FormRuleCompiler</code> — e a página mostra as três
-    camadas lado a lado, a config, o HTML compilado e o formulário funcionando.
+    gerada pelo <code>FormRenderer</code>, e a página mostra as três camadas lado a
+    lado, a config, o HTML gerado e o formulário funcionando.
   </p>
 
   <?php if ($slug !== null): ?>
@@ -65,7 +65,7 @@ if ($slug !== null) {
     <pre><code>php -S localhost:8000 -t .
 # depois: http://localhost:8000/examples/</code></pre>
     <p>
-      Não há dependências, nem Composer, nem banco — o backend dos exemplos é um
+      Não há dependências, nem Composer, nem banco, o backend dos exemplos é um
       único <code>api.php</code> com arrays em memória.
     </p>
   </div>
@@ -87,23 +87,35 @@ if ($slug !== null) {
 
   <h2>Como isto está montado</h2>
   <p>
-    A engine não sabe que existe PHP: ela lê atributos HTML. O que existe do lado
-    do servidor é um <strong>compilador</strong> — configuração declarativa entra,
-    <code>data-*-when</code> sai. Cada demo desta documentação passa por ele:
+    A engine não sabe que existe PHP: ela lê atributos HTML. O que existe do lado do
+    servidor é um <strong>gerador</strong>: configuração declarativa entra, formulário
+    pronto sai, com cada atributo de regra no lugar certo. Cada demo desta documentação
+    passa por ele:
   </p>
-  <pre><code>demos/01-basico.php          ← a config que você escreve
-        ↓  FormRuleCompiler::atributos()
-&lt;div data-visible-when='{"TipoPessoa":"F"}'&gt;   ← o atributo compilado
+  <pre><code>demos/01-basico.php                       ← a config que você escreve
+        ↓  FormRenderer::renderForm()                markup
+           └ FormRuleCompiler::atributos()           regras
+&lt;div class="…" data-visible-when='{"TipoPessoa":"F"}'&gt;  ← o formulário pronto
+  &lt;input name="Cpf"&gt;
+&lt;/div&gt;
         ↓  form-visibility-v2.js
-o campo aparece e some sozinho                ← o runtime</code></pre>
+o campo aparece e some sozinho                          ← o runtime</code></pre>
+  <p>
+    A divisão é de propósito: o <code>FormRenderer</code> cuida do <em>markup</em>, o
+    <code>FormRuleCompiler</code> cuida da <em>tradução de regra</em>. Trocar a
+    marcação não deve exigir tocar em regra, por isso o template do formulário é um
+    arquivo à parte.
+  </p>
 
   <div class="table-scroll">
     <table>
       <tr><th>Arquivo</th><th>Papel</th></tr>
-      <tr><td><code>src/php/FormRuleCompiler.php</code></td><td>O interpretador. Traduz as formas idiomáticas de PHP para a forma canônica da DSL. É do pacote, não desta pasta.</td></tr>
-      <tr><td><code>examples/views/form-builder.phtml</code></td><td>O emissor de markup: config → <code>&lt;form&gt;</code>, seções, campos, botões.</td></tr>
+      <tr><td><code>src/php/FormRenderer.php</code></td><td><strong>Do pacote.</strong> O gerador: config → <code>&lt;form&gt;</code>, seções, grid, rótulos, controles, botões. <code>renderForm()</code>, <code>renderScripts()</code>, <code>pluginsUsados()</code>.</td></tr>
+      <tr><td><code>src/php/templates/form.phtml</code></td><td><strong>Do pacote.</strong> O template do formulário, separado da lógica: trocar a marcação não exige tocar em regra.</td></tr>
+      <tr><td><code>src/php/FormRuleCompiler.php</code></td><td><strong>Do pacote.</strong> O interpretador: traduz as formas idiomáticas de PHP para a forma canônica da DSL.</td></tr>
       <tr><td><code>examples/demos/*.php</code></td><td>Uma config por demonstração.</td></tr>
       <tr><td><code>examples/views/*.phtml</code></td><td>As páginas: prosa + chamadas a <code>fre_demo()</code>.</td></tr>
+      <tr><td><code>examples/lib/form_builder.php</code></td><td>Ponte fina para os nomes <code>fre_*</code> que as páginas já usavam. Código novo chama <code>FormRenderer::</code> direto.</td></tr>
       <tr><td><code>examples/api.php</code></td><td>O backend: CEP, cascata, validação remota, política de senha.</td></tr>
     </table>
   </div>
@@ -113,10 +125,12 @@ o campo aparece e some sozinho                ← o runtime</code></pre>
   <h3>1. Ordem de carregamento</h3>
   <p>
     Núcleo, depois os plugins que você usa, e o bootstrap <strong>por último</strong>.
-    O bootstrap registra só os plugins que encontrar carregados — plugin ausente é
-    ignorado em silêncio, então você paga apenas pelo que usa. Nestas páginas a
-    lista sai de <code>fre_plugins_usados()</code>, calculada a partir das configs
-    renderizadas: é o que um controller de verdade faria.
+    O bootstrap registra só os plugins que encontrar carregados, plugin ausente é
+    ignorado em silêncio, então você paga apenas pelo que usa. Você não precisa
+    montar essa lista: <code>FormRenderer::renderScripts($config)</code> emite as tags
+    na ordem certa, só dos plugins que a config exige. Estas páginas usam a peça de
+    baixo, <code>pluginsUsados()</code>, porque juntam vários formulários na mesma
+    página e precisam da união.
   </p>
 
   <h3>2. O formulário precisa se declarar</h3>
@@ -128,7 +142,7 @@ o campo aparece e some sozinho                ← o runtime</code></pre>
   <h3>3. Comparação é de string</h3>
   <p>
     O valor de um campo é sempre string. <code>{"Quantidade": 1}</code> é falso quando
-    o input contém <code>"1"</code> — escreva <code>{"Quantidade": "1"}</code>. Os
+    o input contém <code>"1"</code>, escreva <code>{"Quantidade": "1"}</code>. Os
     comparadores numéricos (<code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>,
     <code>&lt;=</code>) são exceção: passam por <code>parseFloat</code>.
   </p>
@@ -138,7 +152,7 @@ o campo aparece e some sozinho                ← o runtime</code></pre>
       <strong>Nota de honestidade.</strong> 12 dos 27 plugins usam jQuery. Para os
       exemplos rodarem sem baixar nada, esta pasta traz um
       <em>substituto mínimo</em> em <code>assets/jquery-shim.js</code>, carregado
-      só nas páginas que precisam. Ele não faz parte da engine — no seu projeto,
+      só nas páginas que precisam. Ele não faz parte da engine: no seu projeto,
       carregue o jQuery de verdade.
     </p>
   </div>

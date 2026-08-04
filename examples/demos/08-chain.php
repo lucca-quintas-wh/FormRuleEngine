@@ -30,7 +30,7 @@ return [
             ['name' => 'MunicipioChain', 'label' => 'Município', 'type' => 'text', 'col' => 4, 'readonly' => true],
             [
                 'name' => 'CidadesDaUf', 'label' => 'Outras cidades da UF', 'type' => 'select', 'col' => 4,
-                'placeholder_option' => '—',
+                'placeholder_option' => ': ',
             ],
         ],
     ]],

@@ -107,9 +107,9 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
      * formulário (no cotador, "Orçar por" Tabela/Operadora/Cotação muda rota e
      * corpo). Vence o primeiro modo cuja `when` casa; o que o modo declara
      * sobrescreve o comportamento base. Sem isto, cada modo vira um `if` num
-     * JS de view — que é exatamente o que estamos removendo.
+     * JS de view, que é exatamente o que estamos removendo.
      */
-    resolverModo(behavior) {
+    resolveMode(behavior) {
         const modos = Array.isArray(behavior.modes) ? behavior.modes : [];
         if (!modos.length) return behavior;
 
@@ -119,9 +119,9 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
 
     /**
      * Guardas antes de enviar: condição que, verdadeira, ABORTA com mensagem.
-     * É o "Favor incluir um item" — uma regra de negócio, não de campo.
+     * É o "Favor incluir um item": uma regra de negócio, não de campo.
      */
-    guardasReprovam(behavior) {
+    guardsReject(behavior) {
         const guardas = Array.isArray(behavior.guards) ? behavior.guards : [];
         return guardas.some(guarda => {
             if (!guarda || !guarda.condition) return false;
@@ -135,8 +135,8 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
         const form = this.engine.form;
         if (!form) return false;
 
-        const behavior = this.resolverModo(behaviorBase);
-        if (this.guardasReprovam(behavior)) return false;
+        const behavior = this.resolveMode(behaviorBase);
+        if (this.guardsReject(behavior)) return false;
 
         const formId = form.id || form.getAttribute('name');
         const validator = this.getControllerFirstValidator(formId);
@@ -185,7 +185,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
                 if (window.console && typeof console.error === 'function') {
                     console.error('[FormRuleBehavior] Falha no submit AJAX', xhr);
                 }
-                this.showLegacyMessage(behavior.error_message || 'Não foi possível salvar.', 3000, 'error');
+                this.showLegacyMessage(behavior.error_message || window.FormRuleEngine.t('naoFoiPossivelSalvar'), 3000, 'error');
             }
         });
 
@@ -208,27 +208,32 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
     /**
      * Nomes dos campos reprovados. A versao anterior so olhava o <label> dentro
      * de um wrapper conhecido e, nao achando NENHUM, dizia "Preencha os campos
-     * em destaque" — pedindo uma acao impossivel quando o campo reprovado esta
+     * em destaque", pedindo uma acao impossivel quando o campo reprovado esta
      * escondido, desabilitado ou fora do wrapper esperado (nao ha destaque para
      * o usuario ver). Agora ha degraus de fallback ate o `name` do input, que
      * sempre existe: a mensagem pode ficar tecnica, mas nunca vazia.
      */
-    coletarCamposInvalidos() {
+    collectInvalidFields() {
         const form = this.engine && this.engine.form;
         if (!form) return { nomes: [], escondidos: [] };
 
         const nomes = [];
         const escondidos = [];
-        const marcados = form.querySelectorAll('.ilu-field-error');
+        const marcados = form.querySelectorAll('.' + window.FormRuleEngine.theme.classes('passwordError')[0]);
 
         marcados.forEach((el) => {
-            const wrapper = el.closest('.form-group, .ilu-form-compact__field, [class*="col-"], .field-wrapper, .crm-autocomplete-wrapper');
+            const wrapper = el.closest([
+                window.FormRuleEngine.theme.get('lockWrapper'),
+                window.FormRuleEngine.theme.get('fieldWrapper'),
+                window.FormRuleEngine.theme.get('autocompleteWrap'),
+                '[class*="col-"]', '.field-wrapper',
+            ].join(', '));
             const campo = (el.matches && el.matches('input, select, textarea'))
                 ? el
                 : (wrapper ? wrapper.querySelector('input, select, textarea') : null);
 
             let texto = '';
-            const label = wrapper && wrapper.querySelector('label, .ilu-form-compact__label');
+            const label = wrapper && wrapper.querySelector('label, ' + window.FormRuleEngine.theme.get('label'));
             if (label) texto = label.textContent.replace(/\s*\*+$/, '').trim();
             if (!texto && campo) {
                 texto = campo.getAttribute('aria-label')
@@ -263,10 +268,10 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
                 return;
             }
 
-            const { nomes, escondidos } = this.coletarCamposInvalidos();
+            const { nomes, escondidos } = this.collectInvalidFields();
 
             if (nomes.length) {
-                this.engine.showMessage('error', 'Campos obrigatórios não preenchidos: ' + nomes.join(', '));
+                this.engine.showMessage('error', window.FormRuleEngine.t('camposObrigatoriosLista', { campos: nomes.join(', ') }));
             } else {
                 // Nem o name existia: sobra o generico, mas com o rastro no console.
                 this.engine.showMessage('error', 'Preencha os campos em destaque');
@@ -285,7 +290,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
     }
 
     scrollFirstValidationError(form) {
-        const firstError = form.querySelector('.ilu-field-error');
+        const firstError = form.querySelector('.' + window.FormRuleEngine.theme.classes('passwordError')[0]);
         if (!firstError) {
             return;
         }
@@ -341,7 +346,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
         // uns endpoints, booleano de status em outros (Lead/daoGerarOrcamento).
         // Sem distinguir, o toast exibia literalmente "true".
         if (response && response.sucesso === false) {
-            this.showLegacyMessage(response.mensagem || behavior.error_message || 'Não foi possível salvar.', 3000, 'error');
+            this.showLegacyMessage(response.mensagem || behavior.error_message || window.FormRuleEngine.t('naoFoiPossivelSalvar'), 3000, 'error');
             return;
         }
 
@@ -370,8 +375,8 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
         const returnQuery = behavior.return_query || '';
 
         if (targetRoute) {
-            if (typeof window.openLink === 'function' && $('#conteudo').length) {
-                window.openLink((window.syspath || '') + targetRoute, returnQuery);
+            if ($('#conteudo').length) {
+                window.FormRuleEngine.host.navigate((window.syspath || '') + targetRoute, returnQuery);
             } else {
                 window.location.href = (window.syspath || '') + targetRoute + (returnQuery ? '&' + returnQuery : '');
             }
@@ -383,11 +388,11 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
             if (highlightCod && refreshConfig.data && !refreshConfig.data.__highlight) {
                 refreshConfig.data.__highlight = String(highlightCod);
             }
-            this.refreshMutationTarget(refreshConfig, null, document);
+            this.refreshTarget(refreshConfig, null, document);
         }
 
-        if (behavior.close_drawer && (!response || response.close !== false) && typeof DrawerService !== 'undefined' && typeof DrawerService.closeTop === 'function') {
-            DrawerService.closeTop();
+        if (behavior.close_drawer && (!response || response.close !== false)) {
+            window.FormRuleEngine.host.closePanel();
             document.dispatchEvent(new CustomEvent('crm:drawer:saved', { detail: { behavior: behavior, response: response } }));
         }
     }
@@ -395,7 +400,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
     /**
      * Abre um drawer com o registro recém-criado ("cadastrou → já abre para
      * editar"). É o equivalente moderno do sendForm(...,'daoInsert','edit',...)
-     * do legado, e vinha sendo reescrito à mão em cada módulo — no contrato era
+     * do legado, e vinha sendo reescrito à mão em cada módulo, no contrato era
      * uma função própria, com um setTimeout de 80ms para contornar a corrida com
      * o fechamento do drawer atual. Aqui a espera é pelo EVENTO de fechamento,
      * não por um palpite de tempo.
@@ -455,9 +460,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
         // Rede: se o evento não vier (drawer já fechado, por exemplo), abre assim mesmo.
         window.setTimeout(aoFechar, 400);
 
-        if (typeof DrawerService !== 'undefined' && typeof DrawerService.closeTop === 'function') {
-            DrawerService.closeTop();
-        }
+        window.FormRuleEngine.host.closePanel();
     }
 
     bindAjaxMutations(element, behavior) {
@@ -523,7 +526,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
                     }
 
                     this.clearFields(mutation.clear);
-                    this.refreshMutationTarget(mutation.success_refresh, trigger, scope);
+                    this.refreshTarget(mutation.success_refresh, trigger, scope);
                 },
                 error: xhr => {
                     if (window.console && typeof console.error === 'function') {
@@ -540,19 +543,21 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
             return Promise.resolve(true);
         }
 
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            return window.Swal.fire({
-                icon: mutation.confirm_icon || 'warning',
-                title: mutation.confirm_title || 'Confirmar operação',
-                text: mutation.confirm,
-                showCancelButton: true,
-                confirmButtonText: mutation.confirm_button || 'Confirmar',
-                cancelButtonText: mutation.cancel_button || 'Cancelar',
-                confirmButtonColor: mutation.confirm_button_color || '#dc3545'
-            }).then(result => !!result.isConfirmed);
+        // O diálogo é do host. O padrão usa SweetAlert2 quando existe e cai no
+        // confirm nativo quando não; a confirmação inline abaixo continua como
+        // último recurso, para quem quer o diálogo dentro da própria página.
+        if (mutation.confirm_inline) {
+            return this.openInlineConfirm(mutation);
         }
 
-        return this.openInlineConfirm(mutation);
+        return window.FormRuleEngine.host.confirm({
+            icon: mutation.confirm_icon || 'warning',
+            title: mutation.confirm_title || window.FormRuleEngine.t('confirmarOperacao'),
+            text: mutation.confirm,
+            showCancel: true,
+            confirmText: mutation.confirm_button || window.FormRuleEngine.t('confirmar'),
+            cancelText: mutation.cancel_button || window.FormRuleEngine.t('cancelar'),
+        });
     }
 
     openInlineConfirm(mutation) {
@@ -634,7 +639,7 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
         for (const rule of required) {
             if (!rule || !rule.field) continue;
             if (!this.getSelectorValue(rule.field)) {
-                this.showLegacyMessage(rule.message || 'Preencha os campos obrigatórios.', 3000, 'error');
+                this.showLegacyMessage(rule.message || window.FormRuleEngine.t('camposObrigatorios'), 3000, 'error');
                 return false;
             }
         }
@@ -643,21 +648,21 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
     }
 
     /**
-     * F4.4 — aceita a forma NOVA `{node: 'table:Conta'}` ao lado da antiga
+     * F4.4, aceita a forma NOVA `{node: 'table:Conta'}` ao lado da antiga
      * `{target, route, data}`. As duas convivem de proposito: 252 arquivos usam
      * a antiga, e depreciar seria pedir para editar todos.
      *
-     * F4.8 — a degradacao vive dentro do pedirNode: se o no nao existir na
+     * F4.8, a degradacao vive dentro do pedirNode: se o no nao existir na
      * arvore desta execucao (deploy mudou a estrutura, filtro removeu a regiao,
      * permissao esconde o pedaco), ele chama de volta o caminho antigo. A tela
-     * NUNCA fica sem atualizar em silencio — modo de falha que este repo ja
+     * NUNCA fica sem atualizar em silencio, modo de falha que este repo ja
      * pagou caro.
      */
-    refreshMutationTarget(refreshConfig, trigger, scope) {
+    refreshTarget(refreshConfig, trigger, scope) {
         if (refreshConfig && refreshConfig.node
             && window.IluEnvelope && typeof window.IluEnvelope.pedirNode === 'function') {
             const antigo = (refreshConfig.target || refreshConfig.route)
-                ? () => this.refreshMutationTargetLegado(refreshConfig, trigger, scope)
+                ? () => this.refreshTargetFallback(refreshConfig, trigger, scope)
                 : null;
 
             // O MESMO `data` que o caminho legado postaria vai como estado de
@@ -668,10 +673,10 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
             if (window.IluEnvelope.pedirNode(refreshConfig.node, antigo, refreshConfig.data)) { return; }
         }
 
-        return this.refreshMutationTargetLegado(refreshConfig, trigger, scope);
+        return this.refreshTargetFallback(refreshConfig, trigger, scope);
     }
 
-    refreshMutationTargetLegado(refreshConfig, trigger, scope) {
+    refreshTargetFallback(refreshConfig, trigger, scope) {
         if (!refreshConfig || !refreshConfig.target || !refreshConfig.route) return;
 
         const payload = this.resolvePayload(refreshConfig.data || {}, trigger);
@@ -680,11 +685,11 @@ window.FormRuleBehaviorPlugin = window.FormRuleBehaviorPlugin || class FormRuleB
             ? targetSelector.substring(1)
             : '';
 
-        if (simpleIdTarget && typeof window.openLinkDiv === 'function') {
-            window.openLinkDiv(
+        if (simpleIdTarget) {
+            window.FormRuleEngine.host.loadInto(
+                simpleIdTarget,
                 this.resolveRoute(refreshConfig.route),
-                $.param(payload),
-                simpleIdTarget
+                $.param(payload)
             );
             return;
         }

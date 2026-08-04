@@ -4,7 +4,7 @@
  * on_fail roda ações.
  *
  * Detalhe que evita bug: um aborto NOSSO (chegou um gatilho mais novo numa
- * cascata) não dispara este caminho — limpar aí apagaria o resultado da busca
+ * cascata) não dispara este caminho, limpar aí apagaria o resultado da busca
  * que substituiu a abortada.
  */
 

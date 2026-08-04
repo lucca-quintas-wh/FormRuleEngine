@@ -2,7 +2,7 @@
 
   <h1><code>copy_when</code> · <code>lock_when</code> · <code>revert_when</code></h1>
   <p class="lead">
-    Três respostas diferentes para a mesma pergunta — "este valor não pode ser esse" —
+    Três respostas diferentes para a mesma pergunta, "este valor não pode ser esse"
     e a diferença entre elas é <em>quando</em> a regra age.
   </p>
   <span class="deps">Dependências: <strong>jQuery</strong> (copy e revert) · lock não precisa</span>
@@ -27,7 +27,7 @@
   <div class="table-scroll">
     <table>
       <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
-      <tr><td><code>source</code></td><td>—</td><td><strong>Obrigatória.</strong> Nome do campo de origem.</td></tr>
+      <tr><td><code>source</code></td><td>sem padrão</td><td><strong>Obrigatória.</strong> Nome do campo de origem.</td></tr>
       <tr><td><code>condition</code></td><td>sempre</td><td>Quando copiar.</td></tr>
       <tr><td><code>event</code></td><td><code>change</code></td><td>Eventos do campo de destino a observar (separados por espaço).</td></tr>
       <tr><td><code>clear_on_unlock</code></td><td><code>true</code></td><td>Ao deixar de valer, restaura o valor original do destino.</td></tr>
@@ -48,7 +48,7 @@
     <p>
       <strong>Campo travado não é enviado.</strong> O plugin põe <code>disabled</code>,
       e o navegador não serializa campo desabilitado. Se o valor travado precisa chegar
-      ao servidor, mantenha um <code>hidden</code> espelhando-o — por
+      ao servidor, mantenha um <code>hidden</code> espelhando-o, por
       <code>set_value_when</code>, por exemplo.
     </p>
   </div>
@@ -82,7 +82,7 @@
       ninguém acabou de tocar.
     </p>
     <p>
-      2. Ela só julga eventos com <code>originalEvent</code> — isto é, ação humana. Uma
+      2. Ela só julga eventos com <code>originalEvent</code>, isto é, ação humana. Uma
       cascata que repopula o combo dispara <code>change</code> programático com valor
       vazio, e reverter aí seria brigar com a cascata. A reversão em si também
       <strong>não</strong> dispara <code>change</code>, para não cascatear a partir de
@@ -94,7 +94,7 @@
     <p>
       <strong>Mensagens.</strong> A engine chama <code>showMessage(tipo, texto)</code>,
       que procura, nesta ordem, as globais <code>communicate</code>,
-      <code>alerta</code> e <code>message</code> — e cai em <code>console.error</code>
+      <code>alerta</code> e <code>message</code>, e cai em <code>console.error</code>
       se nenhuma existir. Definir <em>uma</em> delas é toda a integração com o seu
       sistema de notificação. Estas páginas definem <code>communicate</code>.
     </p>

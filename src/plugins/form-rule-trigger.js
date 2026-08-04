@@ -5,7 +5,7 @@
  * Formato:
  *   trigger_when: [
  *     {
- *       condition: { op: 'not_empty' },          // opcional — condição sobre o valor do campo
+ *       condition: { op: 'not_empty' },         // opcional, condição sobre o valor do campo
  *       fire: [
  *         { field: 'CampoAlvo', event: 'change' },
  *         { field: 'OutroCampo', event: 'change', delay: 50 }
@@ -46,7 +46,11 @@ window.FormRuleTriggerPlugin = window.FormRuleTriggerPlugin || class FormRuleTri
                     const event      = (typeof target === 'object' ? target.event : null) || 'change';
                     const delay      = (typeof target === 'object' ? target.delay : null) || 0;
 
-                    const el = this.findInput(targetField);
+                    // `targetField` é o NOME do campo. findInput() espera um
+                    // elemento e só faz element.querySelector(), então a versão
+                    // anterior lançava TypeError aqui dentro do handler e o
+                    // evento nunca chegava ao alvo.
+                    const el = this.engine.form.querySelector(`[name="${targetField}"]`);
                     if (!el) return;
                     if (delay > 0) {
                         setTimeout(() => $(el).trigger(event), delay);

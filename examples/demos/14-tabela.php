@@ -9,7 +9,7 @@
  * que documenta o contrato de seletores.
  *
  * Por que a cascata daqui não é o fetch_when: aquele casa campos por `name`, e
- * numa tabela todas as linhas repetem name="planoMulti[]" — a linha 3
+ * numa tabela todas as linhas repetem name="planoMulti[]", a linha 3
  * repopularia o combo da linha 1. As funções desta tabela resolvem sempre
  * dentro da <tr> de origem.
  *
@@ -79,9 +79,9 @@ return [
         'bare'   => true,
         'fields' => [
             /* A regra vai no elemento que CONTÉM o wrapper da tabela.
-               O conteúdo do objeto quase não importa — o plugin só aceita uma
-               chave `condition` opcional —, mas ele precisa NÃO ser vazio:
-               tanto o emissor quanto o FormRuleCompiler pulam a regra com
+               O conteúdo do objeto quase não importa, porque o plugin só aceita
+               uma chave `condition` opcional. Mas ele precisa NÃO ser vazio:
+               tanto o FormRenderer quanto o FormRuleCompiler pulam a regra com
                `empty()`, e `empty([])` é verdadeiro. Uma regra declarada como
                array vazio é descartada em silêncio. */
             ['type' => 'raw', 'col' => 12, 'dynamic_table' => ['init' => true], 'html' => $tabela],

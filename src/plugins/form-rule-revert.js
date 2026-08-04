@@ -1,10 +1,10 @@
 /**
- * Plugin: revert_when — recusa uma escolha e devolve o campo ao valor anterior.
+ * Plugin: revert_when, recusa uma escolha e devolve o campo ao valor anterior.
  *
  * É a regra do tipo "já existe X aqui, exclua antes de trocar": diferente de
  * `prevent_submit_when` (que deixa escolher e barra no fim) e de `disabled_when`
  * (que impede escolher). Aqui a escolha é feita, avaliada e DESFEITA na hora,
- * com a mensagem explicando por quê — foi o que o cotador fazia à mão em
+ * com a mensagem explicando por quê, foi o que o cotador fazia à mão em
  * validaTipoPlano(), e o mesmo padrão existe em contrato e proposta.
  *
  * Uso (PHP):
@@ -23,7 +23,7 @@
 window.FormRuleRevertPlugin = window.FormRuleRevertPlugin || class FormRuleRevertPlugin extends window.FormRulePlugin {
     constructor() {
         super('revert');
-        this.anteriores = new WeakMap();
+        this.previousValues = new WeakMap();
     }
 
     extractDependencies(rules) {
@@ -37,7 +37,7 @@ window.FormRuleRevertPlugin = window.FormRuleRevertPlugin || class FormRuleRever
         const input = this.findInput(element);
         if (!input) return;
 
-        this.anteriores.set(input, input.value);
+        this.previousValues.set(input, input.value);
         if (input.dataset.revertBound === 'true') return;
         input.dataset.revertBound = 'true';
 
@@ -45,17 +45,17 @@ window.FormRuleRevertPlugin = window.FormRuleRevertPlugin || class FormRuleRever
 
         $(input).on('change.revertwhen', (event) => {
             // Só julga ação do usuário. Repopular um combo por cascata dispara
-            // change com valor vazio, e reverter aí seria brigar com a cascata.
+            // change com valor isEmpty, e reverter aí seria brigar com a cascata.
             if (!event.originalEvent) {
-                this.anteriores.set(input, input.value);
+                this.previousValues.set(input, input.value);
                 return;
             }
-            this.avaliar(input, configs);
+            this.judge(input, configs);
         });
     }
 
-    avaliar(input, configs) {
-        const anterior = this.anteriores.get(input);
+    judge(input, configs) {
+        const anterior = this.previousValues.get(input);
         const escolhido = input.value;
 
         for (const regra of configs) {
@@ -75,12 +75,12 @@ window.FormRuleRevertPlugin = window.FormRuleRevertPlugin || class FormRuleRever
             if (window.jQuery && window.jQuery(input).data('select2')) {
                 window.jQuery(input).trigger('change.select2');
             }
-            this.anteriores.set(input, input.value);
+            this.previousValues.set(input, input.value);
             return;
         }
 
         // Escolha aceita.
-        this.anteriores.set(input, escolhido);
+        this.previousValues.set(input, escolhido);
         configs.forEach(regra => {
             if (regra && regra.remember_in && escolhido !== '') {
                 this.engine.setFieldValue(regra.remember_in, escolhido, false);

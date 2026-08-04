@@ -8,13 +8,13 @@
   <span class="deps">Dependências: <strong>nenhuma</strong></span>
 
   <div class="warn">
-    <p><strong>A armadilha do wrapper — leia antes de escrever a primeira regra.</strong></p>
+    <p><strong>A armadilha do wrapper. Leia antes de escrever a primeira regra.</strong></p>
     <p>
       Estes plugins encontram o campo com
       <code>element.querySelector('input, select, textarea')</code>: procuram
       <strong>dentro</strong> do elemento e nunca consideram o próprio elemento.
       Um <code>data-required-when</code> no <code>&lt;input&gt;</code> falha em
-      silêncio — sem erro, sem aviso no console, o campo simplesmente nunca fica
+      silêncio: sem erro, sem aviso no console, o campo simplesmente nunca fica
       obrigatório.
     </p>
     <pre><code>&lt;!-- NÃO funciona --&gt;
@@ -25,15 +25,16 @@
   &lt;input name="Cnpj"&gt;
 &lt;/div&gt;</code></pre>
     <p>
-      <code>visible_when</code> é a exceção — age no próprio elemento —, o que torna a
-      armadilha pior: o primeiro plugin que a maioria experimenta funciona nos dois
+      <code>visible_when</code> é a exceção, porque age no próprio elemento, o que torna
+      a armadilha pior: o primeiro plugin que a maioria experimenta funciona nos dois
       lugares, e a expectativa se forma errada.
     </p>
     <p>
-      <strong>Gerando do servidor, o problema não existe:</strong> o emissor sempre
-      põe o atributo no wrapper. É por isso que a armadilha nunca apareceu no projeto
-      de origem — quem escreve HTML à mão é que tropeça. Corrigir o
-      <code>findInput()</code> para tolerar os dois casos está no roadmap.
+      <strong>Gerando com o <code>FormRenderer</code>, o problema não existe:</strong>
+      ele sempre põe o atributo no wrapper. É por isso que a armadilha nunca apareceu
+      no projeto de origem: quem escreve HTML à mão é que tropeça, e é o argumento
+      mais forte a favor de haver um gerador. Corrigir o <code>findInput()</code> para
+      tolerar os dois casos continua no roadmap.
     </p>
   </div>
 
@@ -41,16 +42,16 @@
   <p>
     Quando a condição é verdadeira, o plugin põe <code>required</code> no input e as
     classes <code>ilu-input--required</code> e <code>required</code>. Se houver um
-    rótulo com a classe <code>ilu-form-label</code> dentro do wrapper — e o emissor
-    sempre põe —, ele também ganha <code>ilu-form-label--required</code>. É assim que
-    o asterisco aparece; o CSS é seu.
+    rótulo com a classe <code>ilu-form-label</code> dentro do wrapper (e o
+    <code>FormRenderer</code> sempre a escreve), ele também ganha
+    <code>ilu-form-label--required</code>. É assim que o asterisco aparece; o CSS é seu.
   </p>
 
   <?= fre_demo('02-obrigatorio', ['aberto' => true]) ?>
 
   <h2>2. A mesma regra escrita errado</h2>
   <p>
-    Abaixo, o atributo está no próprio input. Nada acontece — nem erro, nem asterisco.
+    Abaixo, o atributo está no próprio input. Nada acontece, nem erro, nem asterisco.
     Deixamos o caso aqui de propósito, para você reconhecer o sintoma.
   </p>
 
@@ -64,7 +65,7 @@
     <p>
       <strong>Efeito colateral útil:</strong> campo <code>disabled</code> não é enviado
       no submit. Isso o torna a forma mais limpa de garantir que um ramo inaplicável
-      não chegue ao servidor — mais confiável do que esconder, já que campo oculto
+      não chegue ao servidor: mais confiável do que esconder, já que campo oculto
       continua sendo serializado.
     </p>
   </div>
@@ -77,7 +78,7 @@
     <p>
       <strong>Obrigatório dentro de bloco oculto trava o envio sem explicação.</strong>
       Se um campo com <code>required</code> ficar escondido, a validação nativa do
-      navegador barra o submit e não consegue mostrar onde está o erro — o Chrome
+      navegador barra o submit e não consegue mostrar onde está o erro, o Chrome
       recusa focar um campo invisível. Sempre que um bloco condicional contiver campos
       obrigatórios, faça a obrigatoriedade depender da mesma condição da visibilidade
       (como acima) ou desabilite o bloco ao escondê-lo.

@@ -3,7 +3,7 @@
   <h1><code>fetch_when</code></h1>
   <p class="lead">
     O plugin mais denso da engine: busca por documento, cascata de combos,
-    encadeamento e tratamento de falha — tudo declarado. É o que substitui os
+    encadeamento e tratamento de falha: tudo declarado. É o que substitui os
     <code>carregaCidades()</code> / <code>buscaCep()</code> espalhados pelas views.
   </p>
   <span class="deps">Dependências: <strong>jQuery</strong> · backend real em <code>examples/api.php</code></span>
@@ -14,7 +14,7 @@
       no campo que <em>dispara</em> a busca (<code>event: 'blur'</code>,
       <code>'change'</code>, <code>'input'</code>). No modo cascata
       (<code>event: 'dependency'</code>) a regra mora no campo de <em>destino</em>, e
-      quem dispara é a mudança das dependências — a engine já reavalia o elemento, e é
+      quem dispara é a mudança das dependências: a engine já reavalia o elemento, e é
       essa reavaliação que executa a busca.
     </p>
   </div>
@@ -33,21 +33,23 @@
 
   <?= fre_demo('08-cascata') ?>
 
-  <div class="warn">
+  <div class="tip">
     <p>
-      <strong><code>event: 'load'</code> exige <code>'skip_empty' =&gt; false</code>.</strong>
-      No modo clássico, o plugin aborta a requisição quando o <em>valor do próprio
-      campo</em> está vazio — e num combo que ainda vai ser preenchido ele está sempre
-      vazio. Sem a chave, o carregamento inicial simplesmente não acontece, sem erro
-      nenhum. O modo <code>dependency</code> não tem esse problema: lá o valor do campo
-      é irrelevante, porque ele é o destino, não a origem.
+      <strong><code>event: 'load'</code> não precisa mais de
+      <code>'skip_empty' =&gt; false</code>.</strong> O plugin abortava a requisição
+      quando o <em>valor do próprio campo</em> estava vazio, e num combo que ainda vai
+      ser preenchido ele está sempre vazio: o carregamento inicial simplesmente não
+      acontecia, sem erro nenhum. Hoje <code>load</code> é tratado como
+      <code>dependency</code>, onde o valor do campo é irrelevante porque ele é o
+      destino, não a origem. A chave continua na config deste exemplo porque não faz
+      mal e documenta o histórico.
     </p>
   </div>
 
   <h3>Por que <code>trigger</code> é explícito</h3>
   <p>
     Sem ele, as dependências sairiam dos tokens do corpo da requisição. Em cascatas
-    reais o corpo às vezes cita o <strong>próprio destino</strong> — e aí o campo
+    reais o corpo às vezes cita o <strong>próprio destino</strong>, e aí o campo
     dispararia a busca que o repopula, em laço infinito. Declarar <code>trigger</code>
     é dizer exatamente quem acorda a regra.
   </p>
@@ -55,7 +57,7 @@
   <h3>Por que <code>require</code> esvazia em vez de só abortar</h3>
   <p>
     Faltando o filtro, deixar a lista anterior no ar mostraria opções de um contexto
-    que não vale mais — o usuário escolheria uma cidade de outro estado. Esvaziar é a
+    que não vale mais: o usuário escolheria uma cidade de outro estado. Esvaziar é a
     resposta honesta.
   </p>
 
@@ -72,7 +74,7 @@
       <strong>Requisições concorrentes.</strong> Numa cascata vários gatilhos mudam no
       mesmo instante e a mesma busca sairia duas vezes. O plugin guarda a requisição em
       voo por assinatura: se for idêntica, a segunda é descartada; se for diferente, a
-      anterior é <em>abortada</em> — senão a resposta atrasada sobrescreveria a nova. E
+      anterior é <em>abortada</em>, senão a resposta atrasada sobrescreveria a nova. E
       aborto próprio não dispara <code>on_fail</code>.
     </p>
   </div>
@@ -98,32 +100,32 @@
     <table>
       <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
       <tr><td><code>event</code></td><td><code>blur</code></td><td><code>blur</code>, <code>change</code>, <code>input</code>, <code>load</code> (uma vez, na inicialização) ou <code>dependency</code> (modo cascata).</td></tr>
-      <tr><td><code>url</code></td><td>—</td><td>Template. <code>{value}</code>, <code>{Campo}</code>.</td></tr>
+      <tr><td><code>url</code></td><td>sem padrão</td><td>Template. <code>{value}</code>, <code>{Campo}</code>.</td></tr>
       <tr><td><code>method</code></td><td><code>GET</code></td><td>Verbo HTTP.</td></tr>
-      <tr><td><code>data</code></td><td>—</td><td>Corpo/query. Cada valor passa pelo template.</td></tr>
+      <tr><td><code>data</code></td><td>sem padrão</td><td>Corpo/query. Cada valor passa pelo template.</td></tr>
       <tr><td><code>data_type</code></td><td><code>json</code></td><td>Repassado ao <code>$.ajax</code>.</td></tr>
       <tr><td><code>condition</code></td><td>sempre</td><td>Só busca quando verdadeira. Em cascata, falsa ⇒ esvazia o destino.</td></tr>
       <tr><td><code>trigger</code></td><td>derivado</td><td>Modo cascata: lista explícita de campos que acordam a regra.</td></tr>
-      <tr><td><code>require</code></td><td>—</td><td>Campos que precisam estar preenchidos; faltando algum, esvazia o destino.</td></tr>
-      <tr><td><code>sanitize</code></td><td>—</td><td><code>'digits'</code> remove tudo que não é dígito de <code>{value}</code>.</td></tr>
+      <tr><td><code>require</code></td><td>sem padrão</td><td>Campos que precisam estar preenchidos; faltando algum, esvazia o destino.</td></tr>
+      <tr><td><code>sanitize</code></td><td>sem padrão</td><td><code>'digits'</code> remove tudo que não é dígito de <code>{value}</code>.</td></tr>
       <tr><td><code>debounce</code></td><td><code>0</code></td><td>Milissegundos (só com <code>event: 'input'</code>).</td></tr>
       <tr><td><code>min_length</code></td><td><code>0</code></td><td>Tamanho mínimo do valor para buscar.</td></tr>
       <tr><td><code>skip_empty</code></td><td><code>true</code></td><td>Não busca com o campo vazio.</td></tr>
       <tr><td><code>immediate</code></td><td><code>false</code></td><td>Executa já na inicialização, mesmo em modo cascata.</td></tr>
       <tr><td><code>loading</code></td><td><code>false</code></td><td>Abre um token no <code>window.LoadingManager</code>, se existir.</td></tr>
-      <tr><td><code>map</code></td><td>—</td><td><code>['Campo' =&gt; 'caminho.na.resposta']</code>, ou <code>['Campo' =&gt; ['value' =&gt; …, 'display' =&gt; …]]</code> para autocomplete.</td></tr>
-      <tr><td><code>map_options</code></td><td>—</td><td><code>field, path, value_key, label_key, include_empty, select_first, notify, prepend, append</code>. Aceita lista.</td></tr>
-      <tr><td><code>map_selected</code></td><td>—</td><td>Copia <code>data-*</code> da opção selecionada de um select para outros campos.</td></tr>
-      <tr><td><code>chain</code></td><td>—</td><td>Requisições subsequentes, com <code>{response.…}</code> da principal.</td></tr>
-      <tr><td><code>on_success</code> / <code>on_fail</code> / <code>on_empty</code></td><td>—</td><td>Listas de ações.</td></tr>
-      <tr><td><code>clear_on_fail</code></td><td>—</td><td>Campos a limpar quando a requisição falha.</td></tr>
-      <tr><td><code>message_fail</code></td><td>—</td><td>Mensagem exibida na falha.</td></tr>
+      <tr><td><code>map</code></td><td>sem padrão</td><td><code>['Campo' =&gt; 'caminho.na.resposta']</code>, ou <code>['Campo' =&gt; ['value' =&gt; …, 'display' =&gt; …]]</code> para autocomplete.</td></tr>
+      <tr><td><code>map_options</code></td><td>sem padrão</td><td><code>field, path, value_key, label_key, include_empty, select_first, notify, prepend, append</code>. Aceita lista.</td></tr>
+      <tr><td><code>map_selected</code></td><td>sem padrão</td><td>Copia <code>data-*</code> da opção selecionada de um select para outros campos.</td></tr>
+      <tr><td><code>chain</code></td><td>sem padrão</td><td>Requisições subsequentes, com <code>{response.…}</code> da principal.</td></tr>
+      <tr><td><code>on_success</code> / <code>on_fail</code> / <code>on_empty</code></td><td>sem padrão</td><td>Listas de ações.</td></tr>
+      <tr><td><code>clear_on_fail</code></td><td>sem padrão</td><td>Campos a limpar quando a requisição falha.</td></tr>
+      <tr><td><code>message_fail</code></td><td>sem padrão</td><td>Mensagem exibida na falha.</td></tr>
     </table>
   </div>
 
   <h3><code>prepend</code> / <code>append</code> e <code>min_options</code></h3>
   <p>
-    Opções fixas somadas às do servidor — a "Nenhuma" no fim da lista. Com
+    Opções fixas somadas às do servidor, a "Nenhuma" no fim da lista. Com
     <code>min_options</code>, a opção só entra se o servidor tiver devolvido pelo menos
     aquela quantidade de opções reais (um ".:Todos:." só faz sentido com mais de uma).
   </p>

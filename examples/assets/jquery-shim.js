@@ -1,5 +1,5 @@
 /**
- * ATENÇÃO — este arquivo NÃO faz parte da engine e NÃO é jQuery.
+ * ATENÇÃO, este arquivo NÃO faz parte da engine e NÃO é jQuery.
  *
  * É um substituto mínimo, só para estes exemplos rodarem offline, cobrindo
  * exatamente a superfície de jQuery que os 12 plugins acoplados usam:
@@ -9,7 +9,7 @@
  *   $.fn.mask / $.fn.unmask      ·   $(form).serialize()
  *
  * No seu projeto, carregue o jQuery de verdade. Se a página já tem jQuery,
- * NÃO carregue este arquivo — ele sobrescreveria window.$.
+ * NÃO carregue este arquivo: ele sobrescreveria window.$.
  *
  * A parte que realmente importa entender: `.trigger('change')` executa apenas
  * os handlers registrados por aqui e NÃO dispara `addEventListener`. É a mesma
@@ -108,7 +108,7 @@
 
   /**
    * Dispara handlers registrados por este shim, subindo pelos ancestrais
-   * (delegação). Não emite evento nativo — é o comportamento do jQuery para
+   * (delegação). Não emite evento nativo. É o comportamento do jQuery para
    * `change`, e é justamente o que os comentários dos plugins descrevem.
    */
   Collection.prototype.trigger = function (spec) {
@@ -225,7 +225,7 @@
   $.fn = Collection.prototype;
 
   /* ── $.ajax sobre fetch() ───────────────────────────────────────────────
-     Todo AJAX destes exemplos vai para `examples/api.php` de verdade — não há
+     Todo AJAX destes exemplos vai para `examples/api.php` de verdade, não há
      mock. É o que torna as demonstrações de fetch_when / populate_when /
      remote_validate_when honestas: se o contrato com o servidor estiver
      errado, elas quebram aqui também.                                      */
@@ -279,7 +279,7 @@
     };
 
     // Além de done/fail/always, o jQuery aceita os callbacks no próprio config.
-    // O plugin `password` usa `success`/`error`, e o `behavior` usa `beforeSend` —
+    // O plugin `password` usa `success`/`error`, e o `behavior` usa `beforeSend`
     // sem isto a promessa da política de senha nunca resolveria.
     if (typeof config.beforeSend === 'function') config.beforeSend(deferred);
     if (typeof config.success === 'function')  deferred._done.push(config.success);

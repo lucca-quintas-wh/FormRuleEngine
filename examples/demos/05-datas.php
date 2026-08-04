@@ -1,7 +1,7 @@
 <?php
 /**
  * `type: 'days_between'` devolve dias inteiros entre start e end, nunca
- * negativo. Aceita dd/mm/aaaa e também o que o Date nativo entender — inclusive
+ * negativo. Aceita dd/mm/aaaa e também o que o Date nativo entender, inclusive
  * o aaaa-mm-dd de um <input type="date">.
  */
 

@@ -7,7 +7,7 @@
  * o nome exato e depois a versão com os dois underscores.
  *
  * Mudar um deles reavalia TODAS as regras do formulário, não só as dependentes
- * — é o gancho para "esta tela inteira se comporta diferente em modo de edição".
+ *: é o gancho para "esta tela inteira se comporta diferente em modo de edição".
  */
 
 return [

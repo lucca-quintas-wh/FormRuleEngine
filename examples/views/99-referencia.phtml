@@ -3,21 +3,61 @@
   <h1>Referência completa</h1>
   <p class="lead">
     Todos os atributos, a gramática das condições, as ações, o contrato visual e as
-    armadilhas conhecidas — em uma página, para consulta.
+    armadilhas conhecidas: em uma página, para consulta.
   </p>
 
-  <h2>As três camadas</h2>
-  <pre><code>forms/pedido.php                 ← a config declarativa que você escreve
-        ↓  FormRuleCompiler::atributos()
-&lt;div data-visible-when='{"Tipo":"F"}'&gt;  ← o atributo compilado
+  <h2>As camadas</h2>
+  <pre><code>pedido.php                       ← a config declarativa que você escreve
+        ↓  FormRenderer::renderForm()          markup
+           └ FormRuleCompiler::atributos()     regras
+&lt;div class="…" data-visible-when='{"Tipo":"F"}'&gt;   ← o formulário pronto
+  &lt;input name="Cpf"&gt;
+&lt;/div&gt;
         ↓  form-visibility-v2.js
-o campo aparece e some sozinho          ← o runtime</code></pre>
+o campo aparece e some sozinho                     ← o runtime</code></pre>
   <p>
-    A engine não sabe que existe PHP: ela lê atributos. O compilador
-    (<code>src/php/FormRuleCompiler.php</code>) é quem traduz as formas idiomáticas de
-    PHP para a forma canônica da DSL, e é coberto por testes de paridade contra o trait
-    de origem (<code>tests/paridade-php.php</code>) e de contrato com o runtime
-    (<code>tests/cross-php-js.js</code>).
+    A engine não sabe que existe PHP: ela lê atributos. Do lado do servidor há
+    <strong>duas responsabilidades</strong>, em três arquivos, separadas de propósito:
+    markup de um lado, tradução de regra do outro.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Arquivo</th><th>Responsabilidade</th></tr>
+      <tr>
+        <td><code>src/php/FormRenderer.php</code></td>
+        <td>Emite <strong>markup</strong>: seções, grid de 12 colunas, rótulos, controles, botões; e põe cada atributo de regra no lugar certo.</td>
+      </tr>
+      <tr>
+        <td><code>src/php/templates/form.phtml</code></td>
+        <td>O template do formulário, separado da lógica: trocar a marcação não exige tocar em regra.</td>
+      </tr>
+      <tr>
+        <td><code>src/php/FormRuleCompiler.php</code></td>
+        <td>Traduz <strong>regra</strong>: as formas idiomáticas de PHP viram a forma canônica da DSL.</td>
+      </tr>
+    </table>
+  </div>
+  <p>
+    Quatro suítes cobrem o caminho: <code>tests/smoke.js</code> (runtime),
+    <code>tests/paridade-php.php</code> (o compilador contra o trait de origem),
+    <code>tests/cross-php-js.js</code> (o PHP compila, o JS avalia) e
+    <code>tests/gerador-e2e.js</code>: este último parte de uma config, gera o
+    formulário e o exercita no DOM, e é o único que pega atributo pendurado no elemento
+    errado: os outros passariam com o JSON certo no lugar errado.
+  </p>
+
+  <h2>API do lado servidor</h2>
+  <pre><code>require_once 'src/php/FormRenderer.php';   // ele já carrega o compilador
+
+echo FormRenderer::renderForm($config);        // o formulário completo
+echo FormRenderer::renderScripts($config);     // as &lt;script&gt; na ordem obrigatória,
+                                               // só dos plugins que a config usa
+$plugins = FormRenderer::pluginsUsados($config);  // se você monta o carregamento</code></pre>
+  <p>
+    <code>renderScripts()</code> resolve sozinho a ordem que o runtime exige: núcleo,
+    classe base, plugins, bootstrap por último. Se a sua página junta vários
+    formulários, use <code>pluginsUsados()</code> em cada config e emita a união:
+    plugin carregado duas vezes é inofensivo, mas fora de ordem não funciona.
   </p>
 
   <h2>Ordem de carregamento</h2>
@@ -26,7 +66,7 @@ o campo aparece e some sozinho          ← o runtime</code></pre>
 &lt;script src="src/plugins/form-rule-visible.js"&gt;&lt;/script&gt; &lt;!-- só o que você usa --&gt;
 &lt;script src="src/form-visibility-v2.js"&gt;&lt;/script&gt;        &lt;!-- bootstrap: por ÚLTIMO --&gt;</code></pre>
   <ul>
-    <li>O bootstrap varre <code>form[data-form-visibility="true"]</code>. Sem esse atributo, nada acontece — e sem aviso.</li>
+    <li>O bootstrap varre <code>form[data-form-visibility="true"]</code>. Sem esse atributo, nada acontece, e sem aviso.</li>
     <li>Plugin não carregado é ignorado em silêncio: você paga só pelo que usa.</li>
     <li>A inicialização é idempotente (<code>dataset.formVisibilityV2Initialized</code>), o que importa em telas que injetam HTML por AJAX.</li>
     <li>Para inicializar um trecho injetado depois: <code>initFormVisibilityV2(elementoRaiz)</code>.</li>
@@ -36,8 +76,8 @@ o campo aparece e some sozinho          ← o runtime</code></pre>
   <div class="table-scroll">
     <table>
       <tr><th>Chave na config</th><th>Atributo</th><th>Lugar no HTML</th><th>Página</th></tr>
-      <tr><td><code>visible_when</code></td><td><code>data-visible-when</code></td><td>no elemento a esconder — campo, seção, ou até fora do <code>&lt;form&gt;</code></td><td><a href="?p=01-visibilidade">01</a></td></tr>
-      <tr><td><code>required_when</code>, <code>disabled_when</code>, <code>label_when</code>, <code>options_when</code>, <code>mask_when</code>, <code>validate_when</code>, <code>copy_when</code>, <code>fetch_when</code>, <code>populate_when</code>, <code>remote_validate_when</code>, <code>trigger_when</code>, <code>revert_when</code>, <code>password_policy</code></td><td>idem, com <code>-when</code></td><td>no <strong>wrapper</strong> do campo</td><td>—</td></tr>
+      <tr><td><code>visible_when</code></td><td><code>data-visible-when</code></td><td>no elemento a esconder: campo, seção, ou até fora do <code>&lt;form&gt;</code></td><td><a href="?p=01-visibilidade">01</a></td></tr>
+      <tr><td><code>required_when</code>, <code>disabled_when</code>, <code>label_when</code>, <code>options_when</code>, <code>mask_when</code>, <code>validate_when</code>, <code>copy_when</code>, <code>fetch_when</code>, <code>populate_when</code>, <code>remote_validate_when</code>, <code>trigger_when</code>, <code>revert_when</code>, <code>password_policy</code></td><td>idem, com <code>-when</code></td><td>no <strong>wrapper</strong> do campo</td><td>várias</td></tr>
       <tr><td><code>set_value_when</code>, <code>computed_when</code>, <code>lock_when</code>, <code>prevent_submit_when</code></td><td>idem</td><td>em qualquer wrapper (agem por <code>target</code>/nome)</td><td><a href="?p=05-valores-calculados">05</a></td></tr>
       <tr><td><code>visible_when</code>/<code>enabled_when</code> de botão</td><td><code>data-action-when</code></td><td>no <strong>próprio botão</strong>, as duas na mesma chave</td><td><a href="?p=11-botoes-gatilhos">11</a></td></tr>
       <tr><td><code>confirm_submit</code></td><td><code>data-confirm-submit-when</code></td><td>no próprio botão</td><td><a href="?p=10-validacao-remota">10</a></td></tr>
@@ -53,12 +93,12 @@ o campo aparece e some sozinho          ← o runtime</code></pre>
   <div class="warn">
     <p>
       <strong>A armadilha do wrapper.</strong> Os plugins que alteram o input o
-      encontram com <code>element.querySelector('input, select, textarea')</code> —
+      encontram com <code>element.querySelector('input, select, textarea')</code>
       procuram <em>dentro</em>, nunca no próprio elemento. Atributo direto no
       <code>&lt;input&gt;</code> falha em silêncio. <code>visible_when</code> é a
       exceção (age no próprio elemento), o que torna a armadilha pior: o primeiro plugin
       que a maioria experimenta funciona nos dois lugares. <strong>Gerando do servidor,
-      não acontece</strong> — o emissor sempre acerta o lugar.
+      não acontece</strong>, o <code>FormRenderer</code> sempre acerta o lugar.
     </p>
   </div>
 
@@ -128,7 +168,7 @@ o campo aparece e some sozinho          ← o runtime</code></pre>
   </div>
 
   <h2>API pública</h2>
-  <pre><code>window.__formRuleEnginesByName['nomeDoForm']   // por nome — o caminho confiável
+  <pre><code>window.__formRuleEnginesByName['nomeDoForm']   // por nome, o caminho confiável
 window.formVisibilityManager.engine           // o ÚLTIMO form inicializado da página
 
 engine.refresh()                          // reavalia todas as regras
@@ -148,7 +188,7 @@ initFormVisibilityV2(raiz)                // inicializa HTML injetado depois</co
   <div class="warn">
     <p>
       <code>window.formVisibilityManager</code> é sobrescrito a cada formulário
-      inicializado — numa página com vários, ele aponta para o último. Use
+      inicializado: numa página com vários, ele aponta para o último. Use
       <code>window.__formRuleEnginesByName[nome]</code>.
     </p>
   </div>
@@ -169,7 +209,7 @@ initFormVisibilityV2(raiz)                // inicializa HTML injetado depois</co
   <p>
     <code>showMessage(tipo, texto)</code> procura, nesta ordem:
     <code>window.communicate</code>, <code>window.alerta</code>,
-    <code>window.message</code> — e cai em <code>console.error</code> se nenhuma
+    <code>window.message</code>: e cai em <code>console.error</code> se nenhuma
     existir. Definir <strong>uma</strong> delas é toda a integração necessária.
   </p>
 
@@ -208,34 +248,98 @@ initFormVisibilityV2(raiz)                // inicializa HTML injetado depois</co
     </table>
   </div>
 
-  <h2>Armadilhas confirmadas</h2>
+  <h2>Adaptando ao seu projeto</h2>
   <p>
-    Todas de falha <strong>silenciosa</strong>: a regra não dispara e nada aparece no
-    console. As marcadas com ⚙ só acontecem escrevendo HTML à mão — gerando do servidor,
-    o emissor as evita.
+    Três coisas amarravam a engine ao projeto onde nasceu. As três agora se
+    configuram, e os padrões continuam sendo o comportamento histórico.
+  </p>
+
+  <h3>Tema: nomes de classe e seletores</h3>
+  <pre><code>FormRuleEngine.theme.set({
+  label:         '.form-label',   // onde ela PROCURA o rótulo
+  labelRequired: 'is-required',   // o que ela APLICA nele
+  fieldWrapper:  '.form-group',
+});
+
+FormRuleEngine.theme.preset('neutro');  // larga ilu-* e crm-*: tudo vira form-rule-*
+FormRuleEngine.theme.todos();           // o mapa inteiro</code></pre>
+  <p>
+    Os seletores de PROCURA são contrato com o seu markup; as classes de APLICA
+    são o contrário. A tabela do contrato visual, mais abaixo, diz qual é qual.
+  </p>
+
+  <h3>Host: a fronteira com o shell</h3>
+  <pre><code>FormRuleEngine.host.set({
+  confirm:    opcoes =&gt; meuModal.perguntar(opcoes),   // → Promise&lt;boolean&gt;
+  toast:      (tipo, texto) =&gt; meuToast(tipo, texto),
+  submit:     config =&gt; fetch(config.url, …),         // → Promise
+  refresh:    (config, gatilho, escopo) =&gt; …,
+  closePanel: () =&gt; meuDrawer.fechar(),
+  openPanel:  config =&gt; meuDrawer.abrir(config),
+  navigate:   (rota, query) =&gt; …,
+  loadInto:   (alvo, rota, params) =&gt; …,
+});</code></pre>
+  <p>
+    O padrão detecta as globais do host de origem (<code>DrawerService</code>,
+    <code>Swal</code>, <code>openLink</code>) e cai em
+    <code>window.confirm</code> / <code>fetch</code> / eventos de DOM quando elas
+    não existem. Nenhum plugin cita mais esses nomes.
+  </p>
+
+  <h3>Idioma</h3>
+  <pre><code>FormRuleEngine.i18n.locale('en');
+FormRuleEngine.i18n.set({ campoObrigatorio: 'Champ requis' });
+FormRuleEngine.i18n.registrar('es', { … });
+FormRuleEngine.t('etapa', { n: 3 });</code></pre>
+
+  <h2>Quando a regra não dispara</h2>
+  <p>
+    A falha característica desta engine é <strong>silenciosa</strong>: a condição
+    não casa e não há erro. <code>diagnose()</code> percorre as regras registradas
+    e acusa o que costuma estar errado.
+  </p>
+  <pre><code>FormRuleEngine.debug = true;      // antes do bootstrap
+// ou &lt;form data-form-debug="true"&gt;
+
+engine.diagnose();               // devolve a lista, além de escrever no console</code></pre>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Ele acusa</th><th>Por que era caro</th></tr>
+      <tr><td>Regra no <code>&lt;input&gt;</code> em vez do wrapper</td><td>Os plugins procuram o controle <em>dentro</em> do elemento; a regra nunca dispara.</td></tr>
+      <tr><td>Campo citado que não existe no formulário</td><td><code>getFieldValue()</code> devolve <code>null</code> e a condição não casa. Um typo custava a tarde.</td></tr>
+      <tr><td>Condição com mais de uma chave</td><td>O runtime avalia só a primeira. <code>{"A":"1","B":"2"}</code> ignora <code>B</code>.</td></tr>
+      <tr><td>JSON inválido no atributo</td><td>Antes, só um <code>console.error</code> genérico na avaliação.</td></tr>
+      <tr><td>Operador desconhecido</td><td>Caía no <code>default</code> do <code>switch</code> e virava <code>false</code>.</td></tr>
+    </table>
+  </div>
+  <p>
+    Do lado do PHP, <code>FormRuleCompiler::avisos()</code> devolve o que foi
+    encontrado durante a compilação: condição com mais de uma chave, operador
+    desconhecido.
+  </p>
+
+  <h2>Armadilhas que restam</h2>
+  <p>
+    A lista era de dezoito. Onze foram corrigidas no código, e as que sobraram são
+    consequências do desenho, não defeitos: elas continuam valendo, e agora o
+    <code>diagnose()</code> aponta a maioria.
   </p>
 
   <div class="table-scroll">
     <table>
-      <tr><th>#</th><th>Sintoma</th><th>Causa</th><th>O que fazer</th></tr>
-      <tr><td>1 ⚙</td><td>a regra não faz nada</td><td>atributo no <code>&lt;input&gt;</code> em vez do wrapper</td><td>mover para o wrapper</td></tr>
-      <tr><td>2 ⚙</td><td>condição sobre checkbox nunca casa</td><td>checkbox sem <code>value</code> reporta <code>"on"</code> (padrão do HTML), não <code>"S"</code></td><td><code>'checked_value' =&gt; 'S'</code></td></tr>
-      <tr><td>3</td><td>lista de <strong>exatamente 2</strong> valores vira condição sempre falsa</td><td><code>['Uf' =&gt; ['SP','RJ']]</code> é indistinguível do par posicional <code>['op', valor]</code>, e o compilador decide pelo operador</td><td><code>['OR' =&gt; [['Uf'=&gt;'SP'], ['Uf'=&gt;'RJ']]]</code></td></tr>
-      <tr><td>4</td><td><code>label_when</code> em lista não troca o rótulo</td><td>lista sequencial vira <code>['AND' =&gt; …]</code> no normalizador; o plugin esperava array</td><td>emitir como JSON cru (o que <code>lib/form_builder.php</code> faz)</td></tr>
-      <tr><td>5</td><td>regra declarada some sem deixar rastro</td><td><code>empty([])</code> é verdadeiro em PHP; regra com array vazio é pulada</td><td>pôr qualquer chave dentro</td></tr>
-      <tr><td>6</td><td>metade da condição é ignorada</td><td>o runtime lê <strong>só a primeira chave</strong> do objeto</td><td>usar <code>AND</code> — ou a lista sequencial, que o compilador converte</td></tr>
-      <tr><td>7</td><td>comparação numérica sempre falsa</td><td>igualdade não converte tipo; o valor do campo é string</td><td><code>'1'</code> em vez de <code>1</code>, ou usar <code>&gt;</code>/<code>&lt;</code></td></tr>
-      <tr><td>8</td><td>condição sobre campo formatado sempre falsa</td><td><code>parseFloat("1.234,56")</code> devolve <code>1.234</code></td><td>manter uma cópia crua num hidden para comparar</td></tr>
-      <tr><td>9</td><td>a aba trava ao editar um campo</td><td>laço: o mesmo elemento tem uma regra que <em>escreve</em> num campo e outra que <em>lê</em> o mesmo campo</td><td>separar a cadeia em wrappers diferentes</td></tr>
-      <tr><td>10</td><td>o submit trava sem mostrar erro</td><td>campo <code>required</code> dentro de bloco oculto: o navegador não foca campo invisível</td><td>fazer <code>required_when</code> depender da mesma condição do <code>visible_when</code></td></tr>
-      <tr><td>11</td><td>dados de um ramo abandonado chegam ao servidor</td><td>esconder não desabilita, e campo oculto continua sendo serializado</td><td><code>'clear_on_hide' =&gt; true</code> ou <code>disabled_when</code></td></tr>
-      <tr><td>12</td><td>o valor travado não chega ao servidor</td><td><code>lock_when</code> aplica <code>disabled</code>, e campo desabilitado não é enviado</td><td>espelhar num <code>hidden</code></td></tr>
-      <tr><td>13</td><td><code>prevent_submit_when</code> não bloqueia nada</td><td>o guarda do núcleo só se instala se existir <code>window.sendForm</code></td><td>chamar <code>validateBeforeSubmit()</code> no seu handler</td></tr>
-      <tr><td>14</td><td><code>trigger_when</code> lança <code>TypeError</code></td><td><strong>bug</strong>: <code>findInput()</code> recebe o nome do campo (string) em vez de um elemento</td><td>usar a ação <code>trigger</code> do <code>fetch_when</code></td></tr>
-      <tr><td>15</td><td>combo com <code>fetch_when</code> + <code>event: 'load'</code> nunca carrega</td><td><code>skip_empty</code> (padrão <code>true</code>) aborta porque o valor do próprio campo está vazio</td><td>acrescentar <code>'skip_empty' =&gt; false</code></td></tr>
-      <tr><td>16</td><td>regras não valem em linhas novas</td><td>o mapa de dependências é montado no registro do plugin</td><td><code>engine.addElement()</code>, ou o plugin <code>repeater-init</code></td></tr>
-      <tr><td>17</td><td>uma requisição AJAX sai duas vezes</td><td>o mesmo elemento registrado duas vezes por <code>addElement()</code>, que não é idempotente</td><td>garantir um único registro por elemento</td></tr>
-      <tr><td>18</td><td>escolher no autocomplete/Select2 não reavalia nada</td><td>eles avisam com <code>$.trigger('change')</code>, que não aciona <code>addEventListener</code></td><td>já resolvido: o núcleo mantém uma ponte para o barramento do jQuery</td></tr>
+      <tr><th>Sintoma</th><th>Causa</th><th>O que fazer</th></tr>
+      <tr><td>a regra não faz nada</td><td>atributo no <code>&lt;input&gt;</code> em vez do wrapper</td><td>mover para o wrapper; o gerador já acerta, e o <code>diagnose()</code> acusa</td></tr>
+      <tr><td>metade da condição é ignorada</td><td>o runtime lê só a primeira chave do objeto</td><td>usar <code>AND</code>, ou a lista sequencial, que o compilador converte</td></tr>
+      <tr><td>comparação numérica sempre falsa</td><td>igualdade não converte tipo; o valor do campo é string</td><td><code>'1'</code> em vez de <code>1</code>, ou usar <code>&gt;</code>/<code>&lt;</code></td></tr>
+      <tr><td>condição sobre campo formatado sempre falsa</td><td><code>parseFloat("1.234,56")</code> devolve <code>1.234</code></td><td>manter uma cópia crua num hidden para comparar</td></tr>
+      <tr><td>a aba trava ao editar um campo</td><td>laço: o mesmo elemento escreve num campo e lê o mesmo campo</td><td>separar a cadeia em wrappers diferentes</td></tr>
+      <tr><td>o submit trava sem mostrar erro</td><td>campo <code>required</code> dentro de bloco oculto: o navegador não foca campo invisível</td><td>fazer <code>required_when</code> seguir a mesma condição do <code>visible_when</code></td></tr>
+      <tr><td>dados de um ramo abandonado chegam ao servidor</td><td>esconder não desabilita, e campo oculto continua sendo serializado</td><td><code>'clear_on_hide' =&gt; true</code> ou <code>disabled_when</code></td></tr>
+      <tr><td>o valor travado não chega ao servidor</td><td><code>lock_when</code> aplica <code>disabled</code></td><td>espelhar num <code>hidden</code></td></tr>
+      <tr><td>regras não valem em linhas novas</td><td>o mapa de dependências é montado no registro do plugin</td><td><code>engine.addElement()</code>, ou o plugin <code>repeater-init</code></td></tr>
+      <tr><td>uma requisição AJAX sai duas vezes</td><td><code>addElement()</code> não é idempotente</td><td>garantir um único registro por elemento</td></tr>
+      <tr><td>o seu <code>addEventListener</code> não vê o <code>trigger_when</code></td><td>o plugin dispara por <code>$.trigger()</code>, que só percorre o barramento do jQuery</td><td>escutar com <code>$(campo).on(…)</code>; as regras da engine veem, por causa da ponte no núcleo</td></tr>
     </table>
   </div>
 

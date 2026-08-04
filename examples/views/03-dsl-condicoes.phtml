@@ -3,7 +3,7 @@
   <h1>A gramática das condições</h1>
   <p class="lead">
     Uma só gramática para <strong>todos</strong> os <code>*_when</code>. Aprendida uma
-    vez, vale para visibilidade, obrigatoriedade, máscara, AJAX, wizard — tudo. Ela
+    vez, vale para tudo: visibilidade, obrigatoriedade, máscara, AJAX, wizard. Ela
     vive em <code>evaluateCondition()</code>, no núcleo, e tem menos de 40 linhas.
   </p>
   <span class="deps">Dependências: <strong>nenhuma</strong></span>
@@ -68,6 +68,7 @@
       <tr><td><code>!=</code></td><td>diferença estrita</td><td><code>['Status' =&gt; ['!=' =&gt; 'A']]</code></td></tr>
       <tr><td><code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code></td><td>numérica, via <code>parseFloat</code> nos dois lados</td><td><code>['Idade' =&gt; ['&gt;=' =&gt; 18]]</code></td></tr>
       <tr><td><code>regex</code></td><td><code>new RegExp(valor).test(campo)</code></td><td><code>['Email' =&gt; ['regex' =&gt; '@empresa\\.com$']]</code></td></tr>
+      <tr><td><code>in</code> / <code>not_in</code></td><td>pertinência explícita; o operando é uma lista</td><td><code>['Uf' =&gt; ['in' =&gt; ['SP','RJ']]]</code></td></tr>
       <tr><td><code>eq_field</code></td><td>compara com <strong>outro campo</strong>; o operando é o <em>nome</em> dele</td><td><code>['Confirmacao' =&gt; ['eq_field' =&gt; 'Senha']]</code></td></tr>
       <tr><td><code>neq_field</code></td><td>idem, negado</td><td><code>['Destino' =&gt; ['neq_field' =&gt; 'Origem']]</code></td></tr>
     </table>
@@ -85,7 +86,7 @@
 
   <div class="warn">
     <p><strong>Só a primeira chave do objeto é lida.</strong></p>
-    <pre><code>{"A":"1","B":"2"}                // avalia SÓ {"A":"1"} — B é ignorado
+    <pre><code>{"A":"1","B":"2"}                // avalia SÓ {"A":"1"}, B é ignorado
 {"AND":[{"A":"1"},{"B":"2"}]}    // o que você queria</code></pre>
     <p>
       <code>evaluateCondition()</code> pega <code>Object.entries(rules)[0]</code> e
@@ -101,15 +102,17 @@
 ['Quantidade' =&gt; ['&gt;' =&gt; 0]]  // funciona com número: passa por parseFloat</code></pre>
   </div>
 
-  <div class="warn">
-    <p><strong>Pertinência com exatamente dois valores é mal compilada.</strong></p>
-    <pre><code>['Uf' =&gt; ['SP', 'RJ']]        // → {"Uf":{"sp":"RJ"}} — operador inexistente, sempre falso
-['Uf' =&gt; ['SP','RJ','MG']]    // 3+ valores: funciona
-['OR' =&gt; [['Uf'=&gt;'SP'], ['Uf'=&gt;'RJ']]]   // a forma segura para dois</code></pre>
+  <div class="tip">
+    <p><strong>Pertinência com dois valores: resolvido.</strong></p>
+    <pre><code>['Uf' =&gt; ['SP', 'RJ']]              // pertinência
+['Uf' =&gt; ['!=', '']]                // par posicional
+['Uf' =&gt; ['in' =&gt; ['SP','RJ']]]     // explícito</code></pre>
     <p>
-      Uma lista de 2 elementos é indistinguível de um par posicional
-      <code>['operador', valor]</code>, e o compilador decide a favor do operador.
-      Falhar só em dois é pior do que falhar sempre — está no roadmap.
+      A lista de dois era indistinguível do par <code>['operador', valor]</code>, e o
+      compilador decidia pelo operador: <code>{"Uf":{"sp":"RJ"}}</code>, condição
+      falsa para sempre e sem aviso. Hoje o par só é reconhecido quando o primeiro
+      elemento é um operador conhecido. E <code>in</code>/<code>not_in</code>, que o
+      compilador sempre deixou passar, passaram a existir no runtime.
     </p>
   </div>
 
@@ -132,15 +135,17 @@
   <div class="warn">
     <p>
       <strong>Checkbox precisa de <code>value</code> explícito.</strong> O código é
-      <code>field.checked ? (field.value || 'S') : 'N'</code> — o <code>|| 'S'</code>
+      <code>field.checked ? (field.value || 'S') : 'N'</code>: o <code>|| 'S'</code>
       só entra quando o <code>value</code> é string vazia. Mas o HTML define
       <code>"on"</code> como valor padrão de um checkbox sem <code>value</code>, então
       o fallback nunca acontece e <code>{"Aceite":"S"}</code> fica sempre falso.
     </p>
     <p>
-      O emissor desta pasta escreve <code>value="S"</code> sempre (configurável por
-      <code>'checked_value'</code>), que é a razão de a armadilha não aparecer quando
-      o HTML vem do servidor.
+      <strong>Corrigido no runtime:</strong> sem o atributo <code>value</code>,
+      marcado passou a ler <code>"S"</code>. Quem declara <code>value</code> continua
+      mandando no valor lido, e o <code>FormRenderer</code> sempre o declara
+      (configurável por <code>'checked_value'</code>). Escrever o HTML à mão deixou
+      de ser um risco aqui.
     </p>
   </div>
 
@@ -171,7 +176,7 @@
   </p>
   <p>
     O helper padrão desce por <code>AND</code>/<code>OR</code> e ignora chaves que não
-    são nome de campo — <code>label</code>, <code>mask</code>, <code>options</code>,
+    são nome de campo: <code>label</code>, <code>mask</code>, <code>options</code>,
     <code>rule</code>, <code>params</code>, <code>class</code>. É por isso que os
     formatos "lista de regras com metadado" funcionam sem configuração extra.
   </p>
@@ -179,7 +184,7 @@
     <p>
       Consequência: uma condição construída depois do registro <strong>não</strong>
       entra no mapa. Elementos criados em runtime precisam de
-      <code>engine.addElement(el, 'visible')</code> — é exatamente o que o plugin
+      <code>engine.addElement(el, 'visible')</code>. É exatamente o que o plugin
       <code>repeater-init</code> faz para cada linha nova.
     </p>
   </div>

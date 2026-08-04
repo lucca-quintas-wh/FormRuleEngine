@@ -7,7 +7,7 @@
  * usavam, delegando tudo à classe.
  *
  * Por que a ponte em vez de reescrever os demos: com ela, a saída das páginas é
- * comparável byte a byte antes e depois da promoção — o que transforma os 19
+ * comparável byte a byte antes e depois da promoção, o que transforma os 19
  * exemplos num teste de regressão do gerador, em vez de 54 arquivos para revisar
  * no diff. Código novo deve chamar `FormRenderer::` direto.
  */

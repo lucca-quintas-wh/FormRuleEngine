@@ -1,6 +1,6 @@
 <?php
 /**
- * Cotação — fluxo guiado.
+ * Cotação, fluxo guiado.
  *
  *   sequence   liberação progressiva: cada campo espera o anterior
  *   lock_when  força um valor e tranca o campo
@@ -18,7 +18,7 @@ return [
     'method' => 'post',
 
     /* Config do plugin `sequence`. Vira um hidden com data-sequence-config.
-       Diferente do wizard: aqui NADA é escondido — todos os campos ficam
+       Diferente do wizard: aqui NADA é escondido, todos os campos ficam
        visíveis, e só o próximo da fila fica habilitado. */
     'sequence_config' => [
         'clear_downstream' => true,
@@ -90,7 +90,7 @@ return [
                 ],
 
                 /* Participa da fila SÓ em plano coletivo. Fora disso continua
-                   visível e travado, e a fila segue para o próximo — é o que
+                   visível e travado, e a fila segue para o próximo. É o que
                    `sequence_when` faz, e é diferente de `visible_when`. */
                 [
                     'name'          => 'Cnpj',
@@ -123,7 +123,7 @@ return [
 
                 /* Sem a chave `bands`, as faixas saem das PRÓPRIAS opções deste
                    campo: o valor "24.28" é o intervalo. Trocar a tabela de
-                   faixas é trocar as opções — nenhuma linha de JS muda.
+                   faixas é trocar as opções, nenhuma linha de JS muda.
 
                    `sequence_keep` protege o valor: quem o preenche é a regra de
                    cálculo, não o usuário, e sem essa marca a limpeza a jusante
@@ -170,7 +170,7 @@ return [
 
         [
             'title'       => 'Travar campo sob condição',
-            'description' => '<code>lock_when</code> age pelo <code>target</code>: o atributo pode morar em qualquer wrapper — aqui, num campo escondido.',
+            'description' => '<code>lock_when</code> age pelo <code>target</code>: o atributo pode morar em qualquer wrapper: aqui, num campo escondido.',
             'fields' => [
                 [
                     'name'    => 'Rural',

@@ -1,6 +1,6 @@
 <?php
 /**
- * FormRuleCompiler — o lado servidor da Form Rule Engine.
+ * FormRuleCompiler, o lado servidor da Form Rule Engine.
  *
  * Traduz config declarativa PHP nos atributos `data-*-when` que o runtime JS lê.
  * É o "interpretador": aceita as várias formas soltas que um autor escreve e
@@ -8,7 +8,7 @@
  *
  * Extraído do trait FormRenderer do CRM de origem (ver reference/php/FormRenderer.php),
  * preservando a semântica método a método. Diferença: aqui não há dependência
- * nenhuma de framework — nem Controller, nem View, nem SField. É PHP puro, sem
+ * nenhuma de framework, nem Controller, nem View, nem SField. É PHP puro, sem
  * estado, e roda em qualquer projeto.
  *
  * @see reference/php/FormRenderer.php  o original, com o resto do render
@@ -23,7 +23,6 @@ final class FormRuleCompiler
         'visible_when'  => 'visible',
         'required_when' => 'required',
         'disabled_when' => 'disabled',
-        'label_when'    => 'label',
         'enabled_when'  => 'enabled',
     ];
 
@@ -32,10 +31,17 @@ final class FormRuleCompiler
      * ao lado de target/values/route/...). Vão para o JSON como estão.
      *
      * A distinção não é cosmética: normalizar estas quebraria a estrutura que o
-     * plugin espera — `set_value_when` tem `values` + `condition`, e tratar o
+     * plugin espera: `set_value_when` tem `values` + `condition`, e tratar o
      * objeto inteiro como condição transformaria `values` num nome de campo.
      */
     private const REGRAS_OBJETO = [
+        /* `label_when` esteve em REGRAS_CONDICAO e não podia: o formato que o
+           plugin espera é uma LISTA de objetos com a chave `label`, e lista
+           sequencial vira ['AND' => …] no normalizador. O plugin recebia objeto
+           onde esperava array, caía no ramo de condição simples, e o rótulo
+           nunca mudava. Divergência deliberada em relação ao trait de origem,
+           fixada em tests/paridade-php.php. */
+        'label_when'           => 'label',
         'options_when'         => 'options',
         'mask_when'            => 'mask',
         'validate_when'        => 'validate',
@@ -65,14 +71,14 @@ final class FormRuleCompiler
         $html = '';
 
         foreach (self::REGRAS_CONDICAO as $chave => $attr) {
-            if (empty($config[$chave])) {
+            if (!self::declarada($config, $chave)) {
                 continue;
             }
             $html .= sprintf(' data-%s-when=\'%s\'', $attr, self::escapar(self::encode($config[$chave])));
         }
 
         foreach (self::REGRAS_OBJETO as $chave => $attr) {
-            if (empty($config[$chave])) {
+            if (!self::declarada($config, $chave)) {
                 continue;
             }
             $json = json_encode($config[$chave], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -80,6 +86,20 @@ final class FormRuleCompiler
         }
 
         return $html;
+    }
+
+    /**
+     * A regra foi declarada?
+     *
+     * Não usa `empty()` de propósito: `empty([])` é verdadeiro em PHP, e havia
+     * regras que não exigem configuração nenhuma (`dynamic_table`), escritas
+     * como `[]`, sendo descartadas em silêncio. Aqui vale a presença da chave.
+     */
+    private static function declarada(array $config, string $chave): bool
+    {
+        return array_key_exists($chave, $config)
+            && $config[$chave] !== null
+            && $config[$chave] !== '';
     }
 
     /**
@@ -124,7 +144,8 @@ final class FormRuleCompiler
             && array_key_exists(2, $rule)
             && count($rule) === 3
             && is_scalar($rule[0])
-            && is_scalar($rule[1])
+            && is_string($rule[1])
+            && in_array(strtolower(trim($rule[1])), self::OPERADORES, true)
         ) {
             return [(string) $rule[0] => [self::normalizeOperator($rule[1]) => $rule[2]]];
         }
@@ -136,6 +157,17 @@ final class FormRuleCompiler
             return ['AND' => array_map([self::class, 'normalize'], $rule)];
         }
 
+        // O runtime lê SÓ a primeira chave de um objeto de condição. Duas ou
+        // mais chaves de campo significam que o autor quis um AND e não escreveu.
+        $camposDiretos = array_diff(array_keys($rule), ['AND', 'OR']);
+        if (count($camposDiretos) > 1) {
+            self::$avisos[] = sprintf(
+                'Condição com %d chaves (%s): o runtime avalia só a primeira. Use AND explícito.',
+                count($camposDiretos),
+                implode(', ', $camposDiretos)
+            );
+        }
+
         $normalized = [];
         foreach ($rule as $field => $value) {
             if ($field === 'AND' || $field === 'OR') {
@@ -144,13 +176,21 @@ final class FormRuleCompiler
                 continue;
             }
 
-            // ['Campo' => ['>', 10]]
-            if (is_array($value) && array_key_exists(0, $value) && array_key_exists(1, $value) && count($value) === 2) {
+            // ['Campo' => ['>', 10]], par posicional. Só quando o primeiro
+            // elemento é mesmo um operador; senão é pertinência de dois valores
+            // e vai adiante como lista.
+            if (
+                is_array($value)
+                && array_key_exists(0, $value) && array_key_exists(1, $value)
+                && count($value) === 2
+                && is_string($value[0])
+                && in_array(strtolower(trim($value[0])), self::OPERADORES, true)
+            ) {
                 $normalized[$field] = [self::normalizeOperator($value[0]) => $value[1]];
                 continue;
             }
 
-            // ['Campo' => ['>' => 10]] — só normaliza o nome do operador
+            // ['Campo' => ['>' => 10]], só normaliza o nome do operador
             if (is_array($value) && count($value) === 1) {
                 $operator = array_key_first($value);
                 if (is_string($operator)) {
@@ -164,6 +204,25 @@ final class FormRuleCompiler
 
         return $normalized;
     }
+
+    /**
+     * Todo operador que o runtime conhece, mais os apelidos aceitos na entrada.
+     *
+     * Existe para desfazer a ambiguidade da lista de dois elementos: até então
+     * `['Uf' => ['SP','RJ']]` (pertinência) era indistinguível de
+     * `['Uf' => ['!=','']]` (par posicional), e o compilador decidia sempre pelo
+     * par, emitindo `{"Uf":{"sp":"RJ"}}`. Operador inexistente, condição
+     * permanentemente falsa, nenhum aviso. Agora o par posicional só é
+     * reconhecido quando o primeiro elemento É um operador.
+     */
+    private const OPERADORES = [
+        'eq', '!=', '>', '<', '>=', '<=', 'regex', 'eq_field', 'neq_field',
+        'in', 'not_in',
+        '=', '==', '===', '<>', '!==', 'neq', 'not_eq',
+    ];
+
+    /** Avisos acumulados na última compilação. Ver `avisos()`. */
+    private static array $avisos = [];
 
     /**
      * Aliases de operador. Existem porque autores escrevem `=`, `==` e `<>` por
@@ -185,7 +244,31 @@ final class FormRuleCompiler
             'not_eq' => '!=',
         ];
 
+        if (!isset($aliases[$operator]) && !in_array($operator, self::OPERADORES, true)) {
+            self::$avisos[] = sprintf(
+                'Operador desconhecido "%s": o runtime devolve falso para ele, sempre.',
+                $operator
+            );
+        }
+
         return $aliases[$operator] ?? $operator;
+    }
+
+    /**
+     * Avisos acumulados desde a última leitura, e limpa a lista.
+     *
+     * São problemas que o runtime não reporta: condição com mais de uma chave,
+     * operador desconhecido. Chame depois de compilar uma tela para transformar
+     * falha silenciosa em log.
+     *
+     * @return string[]
+     */
+    public static function avisos(): array
+    {
+        $avisos = self::$avisos;
+        self::$avisos = [];
+
+        return $avisos;
     }
 
     private static function ehSequencial(array $value): bool

@@ -8,7 +8,7 @@
  *
  * `type: 'age_band'` sem a chave `bands` lê as faixas das OPÇÕES do campo de
  * destino, cujo valor codifica o intervalo ("24.28"). Trocar a tabela de faixas
- * é trocar as opções — nenhuma linha de JS muda.
+ * é trocar as opções, nenhuma linha de JS muda.
  */
 
 return [

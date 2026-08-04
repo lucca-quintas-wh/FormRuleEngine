@@ -24,13 +24,13 @@ window.FormRuleRequiredPlugin = window.FormRuleRequiredPlugin || class FormRuleR
         
         if (isRequired) {
             input.setAttribute('required', 'required');
-            input.classList.add('ilu-input--required', 'required');
-            if (label) label.classList.add('ilu-form-label--required');
+            input.classList.add(...this.temaClasses('inputRequired'));
+            if (label) label.classList.add(...this.temaClasses('labelRequired'));
         } else {
             input.removeAttribute('required');
-            input.classList.remove('ilu-input--required', 'required');
+            input.classList.remove(...this.temaClasses('inputRequired'));
             if (label && !input.dataset.alwaysRequired) {
-                label.classList.remove('ilu-form-label--required');
+                label.classList.remove(...this.temaClasses('labelRequired'));
             }
         }
     }

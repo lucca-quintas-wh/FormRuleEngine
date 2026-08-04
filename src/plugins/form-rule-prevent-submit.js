@@ -10,7 +10,7 @@
  *   ]
  *
  * Quando condition é satisfeita, verifica se todos os campos em 'fields' estão preenchidos.
- * Se algum estiver vazio, bloqueia o submit e exibe a mensagem.
+ * Se algum estiver isEmpty, bloqueia o submit e exibe a mensagem.
  */
 window.FormRulePreventSubmitPlugin = window.FormRulePreventSubmitPlugin || class FormRulePreventSubmitPlugin extends window.FormRulePlugin {
     constructor() {
@@ -38,7 +38,7 @@ window.FormRulePreventSubmitPlugin = window.FormRulePreventSubmitPlugin || class
                 condition: rules.condition || {},
                 fields: rules.fields || [],
                 target: rules.target || null,
-                message: rules.message || 'Campos obrigatórios não preenchidos',
+                message: rules.message || window.FormRuleEngine.t('camposObrigatorios'),
                 skip_empty: rules.skip_empty !== false, // default true
             });
         }
@@ -74,10 +74,11 @@ window.FormRulePreventSubmitPlugin = window.FormRulePreventSubmitPlugin || class
                 emptyFields.forEach(fieldName => {
                     const field = this.engine.form.querySelector(`[name="${fieldName}"]`);
                     if (field) {
-                        field.classList.add('form-rule-prevent-submit-error');
+                        const marca = this.temaClasses('preventSubmitError');
+                        field.classList.add(...marca);
                         // Remove classe após 3s
                         setTimeout(() => {
-                            field.classList.remove('form-rule-prevent-submit-error');
+                            field.classList.remove(...marca);
                         }, 3000);
                     }
                 });

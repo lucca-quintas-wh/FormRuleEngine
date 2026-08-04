@@ -51,16 +51,30 @@ window.FormRulePlugin = window.FormRulePlugin || class FormRulePlugin {
         return this.engine.evaluateCondition(rules);
     }
     
+    /**
+     * Nome de classe ou seletor do tema. Ver FormRuleEngine.theme: os nomes que
+     * a engine aplica e procura são configuráveis, para não obrigar ninguém a
+     * adotar a nomenclatura do projeto onde ela nasceu.
+     */
+    tema(nome) {
+        return window.FormRuleEngine.theme.get(nome);
+    }
+
+    /** O mesmo, já quebrado em lista para classList.add(...)/remove(...). */
+    temaClasses(nome) {
+        return window.FormRuleEngine.theme.classes(nome);
+    }
+
     // Helper: encontra input dentro do wrapper
     findInput(element) {
-        const autocompleteValue = element.querySelector('.crm-autocomplete-value');
+        const autocompleteValue = element.querySelector(this.tema('autocompleteValue'));
         if (autocompleteValue) return autocompleteValue;
 
         return element.querySelector('input, select, textarea');
     }
-    
+
     // Helper: encontra label
     findLabel(element) {
-        return element.querySelector('.ilu-form-label');
+        return element.querySelector(this.tema('label'));
     }
 };

@@ -1,5 +1,5 @@
 /**
- * Utilitários dos exemplos — NÃO fazem parte da engine.
+ * Utilitários dos exemplos, NÃO fazem parte da engine.
  *
  *   Demo.log()               painel de eventos, para ver a engine reagindo
  *   Demo.state()             painel com o valor atual de cada campo
@@ -49,7 +49,7 @@ window.Demo = (function () {
 
   /**
    * A engine mostra mensagens por `showMessage(tipo, texto)`, que procura, nesta
-   * ordem, as globais `communicate`, `alerta` e `message` — e cai em
+   * ordem, as globais `communicate`, `alerta` e `message`, e cai em
    * `console.error` se nenhuma existir. Ou seja: a integração com o seu sistema de
    * notificação é definir UMA dessas funções. Aqui definimos `communicate` para
    * que as mensagens dos exemplos fiquem visíveis.
@@ -102,7 +102,7 @@ window.Demo = (function () {
       body.innerHTML = names.map(function (name) {
         var el = form.querySelector('[name="' + name + '"]');
         var value;
-        if (!el) value = '—';
+        if (!el) value = ', ';
         else if (el.type === 'checkbox') value = el.checked ? (el.value || 'S') : 'N';
         else if (el.type === 'radio') {
           var checked = form.querySelector('[name="' + name + '"]:checked');

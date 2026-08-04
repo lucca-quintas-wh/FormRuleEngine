@@ -3,9 +3,9 @@
  * O laboratório: campos de todo tipo + uma caixa para escrever a condição.
  *
  * Quem avalia é `engine.evaluateCondition()`, a mesma função que os plugins
- * chamam — não há reimplementação da DSL nesta página.
+ * chamam, não há reimplementação da DSL nesta página.
  *
- * Repare no `checked_value` do checkbox: o emissor sempre escreve um `value`
+ * Repare no `checked_value` do checkbox: o FormRenderer sempre escreve um `value`
  * explícito. Sem ele o navegador usa "on" como padrão e a condição
  * {"Aceite":"S"} nunca casa.
  */
@@ -17,7 +17,7 @@ return [
         'fields' => [
             [
                 'name' => 'Status', 'label' => 'Status', 'type' => 'select', 'col' => 4,
-                'options' => ['A' => 'A — ativo', 'I' => 'I — inativo', 'P' => 'P — pendente'],
+                'options' => ['A' => 'A: ativo', 'I' => 'I: inativo', 'P' => 'P: pendente'],
             ],
             ['name' => 'Idade', 'label' => 'Idade', 'type' => 'number', 'col' => 4, 'value' => 20],
             ['name' => 'Email', 'label' => 'E-mail', 'type' => 'text', 'col' => 4, 'value' => 'ana@empresa.com'],

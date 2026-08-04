@@ -18,8 +18,8 @@ window.FormRuleDynamicTablePlugin = window.FormRuleDynamicTablePlugin || class F
 };
 
 // A IIFE abaixo publica window.iluDynamicTable* e as globais de agrupamento.
-// Reexecuta-la nao estoura — nao ha estado mutavel no escopo dela e bindWrapper
-// ja e idempotente por `dataset.dynamicTableInitialized` — mas TROCA as funcoes
+// Reexecuta-la nao estoura, nao ha estado mutavel no escopo dela e bindWrapper
+// ja e idempotente por `dataset.dynamicTableInitialized`, mas TROCA as funcoes
 // publicadas por fechamentos novos, enquanto os listeners de uma tabela ja
 // aberta continuam apontando para os antigos. Passariam a existir dois modulos
 // vivos sobre o mesmo DOM; a guarda evita a divergencia.
@@ -62,15 +62,19 @@ if (!window.iluDynamicTableInit) {
         return cell.dataset.dtValue !== undefined && cell.dataset.dtValue !== '' ? cell.dataset.dtValue : cell.textContent;
     }
 
+    /** Nomes vindos do tema: ver FormRuleEngine.theme. */
+    function tema(nome) { return window.FormRuleEngine.theme.get(nome); }
+
     function getWrapper(target) {
         if (!target) return null;
-        if (target.classList && target.classList.contains('ilu-dynamic-table-wrapper')) return target;
-        return target.querySelector ? target.querySelector('.ilu-dynamic-table-wrapper[data-dynamic-table-config]') : null;
+        var raiz = tema('tableWrapper');
+        if (target.classList && target.classList.contains(raiz.replace(/^\./, ''))) return target;
+        return target.querySelector ? target.querySelector(raiz + '[data-dynamic-table-config]') : null;
     }
 
     function updateSummary(wrapper) {
         var config = parseConfig(wrapper);
-        var table = wrapper.querySelector('table.ilu-dynamic-table');
+        var table = wrapper.querySelector('table.' + tema('table'));
         if (!table) return;
 
         var totalsConfig = config.totals || {};
@@ -88,7 +92,7 @@ if (!window.iluDynamicTableInit) {
             values[field] = 0;
         });
 
-        table.querySelectorAll('tbody tr.ilu-dt-row').forEach(function(row) {
+        table.querySelectorAll('tbody tr.' + tema('tableRow')).forEach(function(row) {
             if (fields.has('vidas')) row.setAttribute('vidas', parseNumber(getCellValue(row, 'vidas')));
             if (fields.has('valor')) row.setAttribute('valor', parseNumber(getCellValue(row, 'valor')));
             fields.forEach(function(field) {
@@ -134,52 +138,44 @@ if (!window.iluDynamicTableInit) {
             return;
         }
 
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            window.Swal.fire({
-                title: 'Atenção',
-                text: config.remove_confirm,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sim, continuar!'
-            }).then(function(result) {
-                if (result.isConfirmed) doRemove();
-            });
-            return;
-        }
-
-        if (window.confirm(config.remove_confirm)) doRemove();
+        window.FormRuleEngine.host.confirm({
+            text: config.remove_confirm,
+            confirmText: window.FormRuleEngine.t('sim'),
+        }).then(function (confirmado) {
+            if (confirmado) doRemove();
+        });
     }
 
     /**
      * Adiciona uma linha a partir do <template data-dt-row-template> emitido pelo
      * dynamic-table.phtml.
      *
-     * O clone preserva os `name` declarados no PHP — inclusive os terminados em
-     * "[]" — porque o backend legado lê as linhas como arrays paralelos indexados
+     * O clone preserva os `name` declarados no PHP, inclusive os terminados em
+     * "[]", porque o backend legado lê as linhas como arrays paralelos indexados
      * (ex.: AcaoLead::daoInsert percorre operadoraMulti[] e casa por índice com
      * planoMulti[], QuantMult[] etc.). É por isso que o repeater não serve aqui:
      * ele indexa o nome (campo0, campo1) e quebraria esse contrato.
      */
     function addRow(wrapper) {
         var tpl = wrapper.querySelector('template[data-dt-row-template]');
-        var tbody = wrapper.querySelector('table.ilu-dynamic-table tbody');
+        var tbody = wrapper.querySelector('table.' + tema('table') + ' tbody');
         if (!tpl || !tbody) return null;
 
-        var emptyRow = tbody.querySelector('tr.ilu-dt-empty-row');
+        var emptyRow = tbody.querySelector('tr.' + tema('tableEmptyRow'));
         if (emptyRow) emptyRow.remove();
 
         var fragment = tpl.content.cloneNode(true);
         var row = fragment.querySelector('tr');
         if (!row) return null;
 
-        row.dataset.index = String(tbody.querySelectorAll('tr.ilu-dt-row').length);
+        row.dataset.index = String(tbody.querySelectorAll('tr.' + tema('tableRow')).length);
         tbody.appendChild(fragment);
 
         var appended = tbody.lastElementChild;
         updateSummary(wrapper);
         wrapper.dispatchEvent(new CustomEvent('iluDynamicTable:rowAdded', {
             bubbles: true,
-            detail: { row: appended, tableId: (wrapper.querySelector('table.ilu-dynamic-table') || {}).id }
+            detail: { row: appended, tableId: (wrapper.querySelector('table.' + tema('table')) || {}).id }
         }));
         return appended;
     }
@@ -226,7 +222,7 @@ if (!window.iluDynamicTableInit) {
         target.innerHTML = '';
         var placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = cascade.placeholder || '.:Escolha:.';
+        placeholder.textContent = cascade.placeholder || window.FormRuleEngine.t('escolha');
         target.appendChild(placeholder);
         return target;
     }
@@ -248,7 +244,7 @@ if (!window.iluDynamicTableInit) {
             }
         });
 
-        // Sem a dependência obrigatória preenchida, fica só no placeholder — é o
+        // Sem a dependência obrigatória preenchida, fica só no placeholder, é o
         // que o indev faz (`if (!val) return;` em comboAdministradora/filtraItem).
         if (missingRequired) {
             target.dispatchEvent(new Event('change', { bubbles: true }));
@@ -327,7 +323,7 @@ if (!window.iluDynamicTableInit) {
         var wrapper = getWrapper(root);
         if (wrapper) bindWrapper(wrapper);
         if (root && root.querySelectorAll) {
-            root.querySelectorAll('.ilu-dynamic-table-wrapper[data-dynamic-table-config]').forEach(bindWrapper);
+            root.querySelectorAll(tema('tableWrapper') + '[data-dynamic-table-config]').forEach(bindWrapper);
         }
     };
 
@@ -343,7 +339,7 @@ if (!window.iluDynamicTableInit) {
 
     window.iluDynamicTableGetRowCount = function(tableId) {
         var table = document.getElementById(tableId);
-        return table ? table.querySelectorAll('tbody tr.ilu-dt-row').length : 0;
+        return table ? table.querySelectorAll('tbody tr.' + tema('tableRow')).length : 0;
     };
 
     window.calcularTotalAgrupamento = function() {
@@ -381,7 +377,7 @@ if (!window.iluDynamicTableInit) {
 })();
 } else {
     // Reinjecao: o modulo ja existe, mas a tabela pode ser NOVA (veio no HTML
-    // que reinjetou o script). Religa o que ainda nao foi religado — bindWrapper
+    // que reinjetou o script). Religa o que ainda nao foi religado, bindWrapper
     // pula wrapper ja inicializado.
     window.iluDynamicTableInit(document);
 }

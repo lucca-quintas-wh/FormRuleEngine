@@ -29,13 +29,13 @@ return [
         'show_nav'     => true,
         'show_submit'  => true,
         'submit_label' => 'Concluir cadastro',
-        // Avanço automático ao preencher — desligado aqui porque atrapalha
+        // Avanço automático ao preencher, desligado aqui porque atrapalha
         // formulários com mais de um campo por etapa.
         'auto_advance' => false,
 
         /* Pulo condicional. `when` é um mapa campo → LISTA de valores; a etapa
            é pulada quando o valor atual está na lista. É um formato próprio do
-           plugin `step`, mais simples que a DSL — não aceita AND/OR. */
+           plugin `step`, mais simples que a DSL, não aceita AND/OR. */
         'skip' => [
             ['step' => 3, 'when' => ['TipoConta' => ['pessoal']]],
         ],
@@ -61,7 +61,7 @@ return [
                     'col'   => 3,
                     'required' => true,
                     /* O painel é injetado pelo plugin logo abaixo, em largura
-                       cheia dentro da grid — por isso o campo pode ser estreito
+                       cheia dentro da grid, por isso o campo pode ser estreito
                        sem espremer o checklist. */
                     'password_policy' => [
                         'source'        => 'api.php?acao=politica-senha',

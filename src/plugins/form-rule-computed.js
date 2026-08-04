@@ -41,7 +41,7 @@ window.FormRuleComputedPlugin = window.FormRuleComputedPlugin || class FormRuleC
     compute(rule) {
         // Idade em anos COMPLETOS a partir de uma data (dd/mm/aaaa).
         if (rule.type === 'age') {
-            const anos = this.idadeEmAnos(this.engine.getFieldValue(rule.source || rule.start));
+            const anos = this.ageInYears(this.engine.getFieldValue(rule.source || rule.start));
             return anos === null ? '' : anos;
         }
 
@@ -51,12 +51,12 @@ window.FormRuleComputedPlugin = window.FormRuleComputedPlugin || class FormRuleC
         // em vez de depender de uma tabela fixa no código que fica errada no dia
         // em que um modelo de agrupamento usar outros cortes.
         if (rule.type === 'age_band') {
-            const idade = this.idadeEmAnos(this.engine.getFieldValue(rule.source));
+            const idade = this.ageInYears(this.engine.getFieldValue(rule.source));
             if (idade === null || idade < 0) return undefined;   // undefined = não mexe no campo
 
             const faixas = Array.isArray(rule.bands) && rule.bands.length
                 ? rule.bands
-                : this.faixasDoCampo(rule.target);
+                : this.bandsFromField(rule.target);
 
             const achada = faixas.find(faixa => {
                 if (faixa.lt !== undefined)  return idade < Number(faixa.lt);
@@ -77,7 +77,7 @@ window.FormRuleComputedPlugin = window.FormRuleComputedPlugin || class FormRuleC
         if (rule.expression) {
             let expression = this.engine.resolveTemplate(rule.expression);
             if (rule.parse === 'br') {
-                // Normaliza números no formato BR ("1.234,56" -> "1234.56") antes de avaliar
+                // Normaliza números no formato BR ("1.234,56" -> "1234.56") antes de judge
                 expression = expression.replace(/\d{1,3}(?:\.\d{3})+,\d+|\d+,\d+/g, m => m.replace(/\./g, '').replace(',', '.'));
             }
             if (/^[0-9+\-*/ ().,]+$/.test(expression)) {
@@ -99,12 +99,12 @@ window.FormRuleComputedPlugin = window.FormRuleComputedPlugin || class FormRuleC
 
     /**
      * Idade em anos completos. Rejeita data inexistente (31/02 vira 03/03 no
-     * construtor do Date) e conta o aniversário do ano corrente — o cálculo do
+     * construtor do Date) e conta o aniversário do ano corrente, o cálculo do
      * legado dividia o intervalo por 360 dias e somava um mês por usar o mês
      * base-zero sem descontar 1, o que dava um ano a mais em vários nascimentos.
      * Faixa etária define preço, então o erro era cobrado do cliente.
      */
-    idadeEmAnos(texto) {
+    ageInYears(texto) {
         const partes = String(texto || '').split('/');
         if (partes.length !== 3) return null;
 
@@ -129,7 +129,7 @@ window.FormRuleComputedPlugin = window.FormRuleComputedPlugin || class FormRuleC
      * Lê as faixas das opções do campo: o valor "24.28" é o próprio intervalo.
      * Opção que não tem essa forma (o ".:Escolha:.") é ignorada.
      */
-    faixasDoCampo(nomeCampo) {
+    bandsFromField(nomeCampo) {
         const campo = this.engine.form.querySelector(`[name="${nomeCampo}"]`);
         if (!campo || campo.tagName !== 'SELECT') return [];
 

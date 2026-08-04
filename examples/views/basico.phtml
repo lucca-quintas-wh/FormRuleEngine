@@ -14,8 +14,8 @@
   <p>
     A configuração acima passou pelo <code>FormRuleCompiler</code>, que traduziu cada
     <code>*_when</code> para um atributo, e o HTML resultante foi para a página junto
-    com quatro plugins — <code>visible</code>, <code>required</code>,
-    <code>disabled</code> e <code>computed</code> — mais o núcleo e o bootstrap. Nada
+    com quatro plugins: <code>visible</code>, <code>required</code>,
+    <code>disabled</code> e <code>computed</code>, mais o núcleo e o bootstrap. Nada
     além disso.
   </p>
 
@@ -29,16 +29,18 @@
 
   <p>
     A lista de plugins não foi escrita à mão: sai de
-    <code>fre_plugins_usados($config)</code>, que varre a configuração e devolve só o
-    que ela exige. Um formulário sem cálculo não baixa o plugin de cálculo.
+    <code>FormRenderer::pluginsUsados($config)</code>, que varre a configuração e
+    devolve só o que ela exige. Um formulário sem cálculo não baixa o plugin de
+    cálculo. Se você não precisa montar o carregamento por conta própria,
+    <code>FormRenderer::renderScripts($config)</code> já emite as tags na ordem certa.
   </p>
 
   <h2>Para onde ir agora</h2>
   <ul>
-    <li><a href="?p=01-visibilidade">01 · Visibilidade</a> — o plugin mais usado, em detalhe.</li>
-    <li><a href="?p=03-dsl-condicoes">03 · A DSL</a> — a gramática que vale para todas as regras.</li>
-    <li><a href="?p=99-referencia">99 · Referência</a> — tudo em uma página, para consulta.</li>
-    <li><a href="?p=17-casos-completos">17 · Casos completos</a> — formulários inteiros, do jeito que sairiam de um controller.</li>
+    <li><a href="?p=01-visibilidade">01 · Visibilidade</a>: o plugin mais usado, em detalhe.</li>
+    <li><a href="?p=03-dsl-condicoes">03 · A DSL</a>, a gramática que vale para todas as regras.</li>
+    <li><a href="?p=99-referencia">99 · Referência</a>: tudo em uma página, para consulta.</li>
+    <li><a href="?p=17-casos-completos">17 · Casos completos</a>: formulários inteiros, do jeito que sairiam de um controller.</li>
   </ul>
 
 <?php fre_pagina_fim(['form_estado' => 'formBasico']); ?>

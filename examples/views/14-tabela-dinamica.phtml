@@ -27,14 +27,14 @@
 
   <?= fre_demo('14-tabela', ['aberto' => true]) ?>
 
-  <div class="warn">
+  <div class="tip">
     <p>
-      <strong>Regra declarada como array vazio é descartada em silêncio.</strong>
-      Tanto o emissor quanto o <code>FormRuleCompiler</code> pulam a chave com
-      <code>empty()</code> — e <code>empty([])</code> é verdadeiro em PHP. Como o
-      <code>dynamic_table</code> não exige configuração nenhuma, é fácil escrever
-      <code>'dynamic_table' =&gt; []</code> e passar meia hora procurando por que o
-      plugin não inicializa. Ponha qualquer chave dentro.
+      <strong>Regra declarada como array vazio já foi descartada em silêncio.</strong>
+      O compilador pulava a chave com <code>empty()</code>, e <code>empty([])</code> é
+      verdadeiro em PHP. Como o <code>dynamic_table</code> não exige configuração
+      nenhuma, era fácil escrever <code>'dynamic_table' =&gt; []</code> e perder meia
+      hora. Hoje a checagem é de presença da chave, e o array vazio compila para
+      <code>data-dynamic-table-when='[]'</code>.
     </p>
   </div>
 
@@ -57,7 +57,7 @@
   <div class="table-scroll">
     <table>
       <tr><th>Chave</th><th>Descrição</th></tr>
-      <tr><td><code>totals.targets</code></td><td><code>['NomeDoCampo' =&gt; 'campoDaLinha']</code> — escreve a soma num campo do formulário.</td></tr>
+      <tr><td><code>totals.targets</code></td><td><code>['NomeDoCampo' =&gt; 'campoDaLinha']</code>, escreve a soma num campo do formulário.</td></tr>
       <tr><td><code>totals.footer</code></td><td>Template com <code>{valor}</code> e <code>{vidas}</code>, escrito em <code>.totalItens</code>.</td></tr>
       <tr><td><code>remove_confirm</code></td><td>Texto de confirmação. Usa SweetAlert2 se existir; senão <code>window.confirm</code>; sem a chave, remove direto.</td></tr>
       <tr><td><code>cascades[]</code></td><td><code>trigger, params, target, url, method, placeholder, value_key, label_key, require</code>.</td></tr>
@@ -68,7 +68,7 @@
     <p>
       <strong>Por que a cascata daqui não é o <code>fetch_when</code>.</strong> O
       <code>fetch_when</code> casa campos por <code>name</code>, e numa tabela dinâmica
-      todas as linhas repetem <code>name="planoMulti[]"</code> — a linha 3 repopularia o
+      todas as linhas repetem <code>name="planoMulti[]"</code>, a linha 3 repopularia o
       combo da linha 1. As funções desta tabela resolvem sempre dentro da
       <code>&lt;tr&gt;</code> de origem.
     </p>
@@ -105,7 +105,7 @@ iluDynamicTableGetRowCount('tabelaItens')</code></pre>
     Aqui está o problema que o <code>repeater-init</code> resolve. A engine monta o mapa
     de dependências <strong>no registro do plugin</strong>, varrendo o DOM daquele
     momento. Uma linha adicionada depois traz atributos <code>data-*-when</code> que
-    ninguém leu — as regras dela simplesmente não existem.
+    ninguém leu, as regras dela simplesmente não existem.
   </p>
 
   <?= fre_demo('14-repeater') ?>
@@ -124,7 +124,7 @@ linha.dispatchEvent(new CustomEvent('ilu:repeater:row-added', {
     <p>
       <strong><code>addElement()</code> não é idempotente.</strong> Ele empilha o
       elemento em <code>this.elements</code> e no mapa de dependências. Registrar a
-      mesma linha duas vezes faz a regra ser avaliada duas vezes por mudança — e em
+      mesma linha duas vezes faz a regra ser avaliada duas vezes por mudança, e em
       <code>fetch_when</code> ou <code>remote_validate_when</code> isso significa
       <em>duas requisições</em>. É por isso que o plugin protege o listener com uma
       bandeira global: sem ela, cada reinjeção do script somaria outro listener, e o
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   /* Repeater simulado: um componente de verdade (IluRepeater, no projeto de
-     origem) faz isto — monta a linha, insere, e avisa com o evento que borbulha. */
+     origem) faz isto: monta a linha, insere, e avisa com o evento que borbulha. */
   var lista = document.getElementById('listaDependentes');
   var n = 0;
   document.getElementById('btnAddDependente').addEventListener('click', function () {

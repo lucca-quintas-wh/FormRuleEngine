@@ -18,7 +18,7 @@
  *
  * Substitui o par legado checkPassword()/loadPassFormat(), cujo JS inline
  * apontava para markup (#scorebar/#passRule*) que só existia na tela de
- * "Alterar Senha" — nas telas de add/edit o handler rodava contra DOM inexistente.
+ * "Alterar Senha", nas telas de add/edit o handler rodava contra DOM inexistente.
  */
 (function () {
     'use strict';
@@ -102,7 +102,7 @@
                 self.bind(element, input, panel, policy || {}, config);
             }).catch(function () {
                 // Sem política não há o que checar: some com o painel em vez de
-                // deixar um bloco vazio na tela.
+                // deixar um bloco isEmpty na tela.
                 if (panel && panel.parentNode) {
                     panel.parentNode.removeChild(panel);
                 }
@@ -126,10 +126,10 @@
                 }
             }
 
-            var grid = element.closest('.ilu-form-compact__grid');
+            var grid = element.closest(this.tema('grid'));
             if (grid) {
                 var slot = document.createElement('div');
-                slot.className = 'ilu-form-compact__field ilu-form-compact__field--col-12 ilu-password-policy-slot';
+                slot.className = this.tema('passwordSlot');
                 // No FIM da grid, não logo após o campo: um col-12 inserido no meio
                 // quebra a linha e empurra os campos seguintes (Confirme a Senha,
                 // Alterar no primeiro logon) para baixo do painel.
@@ -143,23 +143,24 @@
         }
 
         buildPanel(element, config) {
+            var b = this.tema('passwordPanel');   // raiz BEM, configurável
             var panel = document.createElement('div');
-            panel.className = 'ilu-password-policy';
+            panel.className = b;
             panel.style.display = 'none';
 
             var meterHtml = '';
             if (config.meter !== false) {
                 meterHtml =
-                    '<div class="ilu-password-policy__meter">' +
-                      '<div class="ilu-password-policy__bar" data-pw-bar></div>' +
-                      '<span class="ilu-password-policy__score" data-pw-score>0%</span>' +
+                    '<div class="' + b + '__meter">' +
+                      '<div class="' + b + '__bar" data-pw-bar></div>' +
+                      '<span class="' + b + '__score" data-pw-score>0%</span>' +
                     '</div>';
             }
 
             panel.innerHTML =
                 meterHtml +
-                '<p class="ilu-password-policy__headline" data-pw-headline></p>' +
-                '<ul class="ilu-password-policy__rules" data-pw-rules></ul>';
+                '<p class="' + b + '__headline" data-pw-headline></p>' +
+                '<ul class="' + b + '__rules" data-pw-rules></ul>';
 
             this.resolvePanelHost(element, config).appendChild(panel);
             return panel;
@@ -175,32 +176,32 @@
 
             if (minLength > 0) {
                 rules.push({
-                    label: policy.aviso1 || ('Tamanho mínimo de senha ' + minLength),
+                    label: policy.aviso1 || window.FormRuleEngine.t('senhaTamanhoMinimo', { n: minLength }),
                     test: function (v) { return v.length >= minLength; }
                 });
             }
             if (numbers > 0) {
                 rules.push({
-                    label: policy.aviso2 || ('Quantidade mínima de números ' + numbers + '.'),
+                    label: policy.aviso2 || window.FormRuleEngine.t('senhaNumeros', { n: numbers }),
                     test: function (v) { return countMatches(v, /[0-9]/g) >= numbers; }
                 });
             }
             if (upperCase > 0) {
                 rules.push({
-                    label: policy.aviso3 || ('Quantidade mínima de caracteres maiúsculos ' + upperCase + '.'),
+                    label: policy.aviso3 || window.FormRuleEngine.t('senhaMaiusculas', { n: upperCase }),
                     test: function (v) { return countMatches(v, /[A-Z]/g) >= upperCase; }
                 });
             }
             if (especials > 0) {
                 rules.push({
-                    label: (policy.aviso4 || 'Quantidade mínima de caracteres especiais ' + especials + '. Caracteres permitidos ') + ' ' + SPECIAL_CHARS,
+                    label: (policy.aviso4 || window.FormRuleEngine.t('senhaEspeciais', { n: especials })) + ' ' + SPECIAL_CHARS,
                     test: function (v) { return countMatches(v, /[_+\-.,!@#$%^&*();|<>]/g) >= especials; }
                 });
             }
             if (config.confirm_field) {
                 var confirmName = config.confirm_field;
                 rules.push({
-                    label: policy.aviso5 || 'Senhas coincidem.',
+                    label: policy.aviso5 || window.FormRuleEngine.t('senhasCoincidem'),
                     test: function (v, form) {
                         var other = form.querySelector('[name="' + confirmName + '"]');
                         return !!other && other.value === v;
@@ -225,10 +226,11 @@
             }
 
             var list = panel.querySelector('[data-pw-rules]');
+            var b = this.tema('passwordPanel');
             list.innerHTML = rules.map(function (rule, i) {
-                return '<li class="ilu-password-policy__rule" data-pw-rule="' + i + '">' +
-                           '<span class="ilu-password-policy__icon" data-pw-icon></span>' +
-                           '<span class="ilu-password-policy__label">' + escapeHtml(rule.label) + '</span>' +
+                return '<li class="' + b + '__rule" data-pw-rule="' + i + '">' +
+                           '<span class="' + b + '__icon" data-pw-icon></span>' +
+                           '<span class="' + b + '__label">' + escapeHtml(rule.label) + '</span>' +
                        '</li>';
             }).join('');
 
@@ -253,7 +255,7 @@
         evaluate(input, panel, rules, form, config) {
             var value = input.value || '';
 
-            // Campo vazio: esconde o painel e não bloqueia (obrigatoriedade é
+            // Campo isEmpty: esconde o painel e não bloqueia (obrigatoriedade é
             // responsabilidade do required/required_when, não deste plugin).
             if (value === '') {
                 panel.style.display = 'none';
@@ -298,18 +300,18 @@
         setValidity(input, valid, config) {
             // 'data-erro' é a convenção que o guard de submit legado já lê.
             input.setAttribute('data-erro', valid ? 'false' : 'true');
-            input.classList.toggle('ilu-field-error', !valid);
+            input.classList.toggle(this.temaClasses('passwordError')[0], !valid);
 
             if (config.block_submit === false) {
                 input.setAttribute('data-erro', 'false');
-                input.classList.remove('ilu-field-error');
+                input.classList.remove(...this.temaClasses('passwordError'));
             }
         }
     }
 
     // Guarda `||` como nos demais plugins: a classe vive dentro da IIFE, entao
-    // reinjetar nao estoura — mas SUBSTITUIRIA a classe publicada, e instancia
+    // reinjetar nao estoura, mas SUBSTITUIRIA a classe publicada, e instancia
     // antiga deixa de passar em `instanceof` sem que nada acuse. (O policyCache
-    // do fechamento novo tambem nasceria vazio, refazendo o fetch da politica.)
+    // do fechamento novo tambem nasceria isEmpty, refazendo o fetch da politica.)
     window.FormRulePasswordPlugin = window.FormRulePasswordPlugin || FormRulePasswordPlugin;
 })();

@@ -4,7 +4,7 @@
  *
  * Note `['Uf' => ['SP','RJ','MG']]`: pertinência com TRÊS valores. Com
  * exatamente dois, o compilador confundiria a lista com um par posicional
- * ['operador', valor] — ver a armadilha no README de referência.
+ * ['operador', valor], ver a armadilha no README de referência.
  */
 
 return [

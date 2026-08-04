@@ -37,12 +37,12 @@ window.FormRuleValidatePlugin = window.FormRuleValidatePlugin || class FormRuleV
             input.dataset.validateRule = validation.rule;
             input.dataset.validateParams = JSON.stringify(validation.params || {});
             input.dataset.validateMessage = validation.message || '';
-            input.classList.add('form-rule-validated');
+            input.classList.add(...this.temaClasses('validated'));
         } else {
             delete input.dataset.validateRule;
             delete input.dataset.validateParams;
             delete input.dataset.validateMessage;
-            input.classList.remove('form-rule-validated');
+            input.classList.remove(...this.temaClasses('validated'));
         }
     }
     
@@ -117,7 +117,7 @@ window.FormRuleValidatePlugin = window.FormRuleValidatePlugin || class FormRuleV
     
     // Método chamado pelo validate() global
     validateField(input) {
-        if (!input.classList.contains('form-rule-validated')) return true;
+        if (!input.classList.contains(this.temaClasses('validated')[0])) return true;
         
         const ruleName = input.dataset.validateRule;
         const params = JSON.parse(input.dataset.validateParams || '{}');
@@ -132,14 +132,14 @@ window.FormRuleValidatePlugin = window.FormRuleValidatePlugin || class FormRuleV
         const isValid = validator(input.value, params);
         
         if (!isValid) {
-            input.classList.add('form-rule-invalid');
+            input.classList.add(...this.temaClasses('invalid'));
             input.style.border = '1px solid #e74c3c';
             if (message) {
                 // Pode adicionar tooltip/mensagem
                 input.title = message;
             }
         } else {
-            input.classList.remove('form-rule-invalid');
+            input.classList.remove(...this.temaClasses('invalid'));
             input.style.border = '';
             input.title = '';
         }

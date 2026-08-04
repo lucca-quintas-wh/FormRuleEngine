@@ -1,6 +1,6 @@
 <?php
 /**
- * O índice das páginas — fonte única do hub, da navegação anterior/próximo e do
+ * O índice das páginas: fonte única do hub, da navegação anterior/próximo e do
  * <title> de cada uma. Acrescentar uma página é acrescentar uma entrada aqui e
  * um arquivo em views/.
  */
@@ -35,7 +35,7 @@ return [
             'n'      => '02',
             'grupo'  => 'fundamentos',
             'titulo' => 'Obrigatório e desabilitado',
-            'resumo' => 'Alternar obrigatoriedade e habilitação — e a armadilha do wrapper, que derruba todo mundo uma vez.',
+            'resumo' => 'Alternar obrigatoriedade e habilitação, e a armadilha do wrapper, que derruba todo mundo uma vez.',
             'attrs'  => 'required_when · disabled_when',
         ],
         '03-dsl-condicoes' => [
@@ -136,7 +136,7 @@ return [
             'n'      => '16',
             'grupo'  => 'fluxos',
             'titulo' => 'Comportamento do formulário',
-            'resumo' => 'Envio por AJAX e afins — e onde exatamente está a fronteira com o host.',
+            'resumo' => 'Envio por AJAX e afins, e onde exatamente está a fronteira com o host.',
             'attrs'  => 'behavior_when · submit_handler',
         ],
 

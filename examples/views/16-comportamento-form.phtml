@@ -3,7 +3,7 @@
   <h1><code>behavior_when</code> · <code>submit_handler</code></h1>
   <p class="lead">
     A segunda metade do contrato: regras que valem para o <strong>formulário
-    inteiro</strong>, não para um campo. É por aqui que ele envia — e é também a parte
+    inteiro</strong>, não para um campo. É por aqui que ele envia, e é também a parte
     mais acoplada ao sistema onde a engine nasceu.
   </p>
   <span class="deps">Dependências: <strong>jQuery</strong> · e símbolos do host (ver abaixo)</span>
@@ -11,14 +11,14 @@
   <div class="warn">
     <p>
       <strong>Esta página é documentação, não demonstração.</strong> Os dois plugins
-      chamam funções que só existem no CRM de origem — <code>sendForm</code>,
+      chamam funções que só existem no CRM de origem: <code>sendForm</code>,
       <code>DrawerService</code>, <code>refreshMutationTarget</code>,
       <code>openLink</code>. Montar um exemplo vivo exigiria reimplementar esse shell
       inteiro, e o resultado documentaria a imitação, não a engine.
     </p>
     <p>
       O que está aqui é o contrato real, extraído da leitura do código, mais o desenho
-      do <em>host adapter</em> que deve fechar essa fronteira — item 2 do
+      do <em>host adapter</em> que deve fechar essa fronteira, item 2 do
       <a href="../ROADMAP.md">roadmap</a>.
     </p>
   </div>
@@ -26,7 +26,7 @@
   <h2>1. Onde a regra mora</h2>
   <p>
     No <code>&lt;form&gt;</code>, não no campo. A engine, ao registrar um plugin,
-    procura o atributo nos descendentes <em>e</em> no próprio formulário — é o que
+    procura o atributo nos descendentes <em>e</em> no próprio formulário. É o que
     permite uma regra de escopo global. Na config, são chaves de topo:
   </p>
   <pre><code>return [
@@ -51,7 +51,7 @@
       <tr>
         <td><code>ajax_submit</code></td>
         <td>Publica uma função global que serializa e envia o formulário por AJAX, com modos, guardas e ações pós-sucesso.</td>
-        <td><strong>sim</strong> — drawer, refresh, mensagens</td>
+        <td><strong>sim</strong>: drawer, refresh, mensagens</td>
       </tr>
       <tr>
         <td><code>ajax_mutations</code></td>
@@ -60,7 +60,7 @@
       </tr>
       <tr>
         <td><code>token_insert</code></td>
-        <td>Insere um token no cursor de um campo ao clicar num chip — editor de template de mensagem.</td>
+        <td>Insere um token no cursor de um campo ao clicar num chip, editor de template de mensagem.</td>
         <td>não</td>
       </tr>
       <tr>
@@ -71,17 +71,17 @@
       <tr>
         <td><code>intl_phone</code></td>
         <td>Inicializa o seletor internacional de telefone.</td>
-        <td>parcial — chama <code>window.loadIntlTelInput</code> se existir</td>
+        <td>parcial, chama <code>window.loadIntlTelInput</code> se existir</td>
       </tr>
     </table>
   </div>
 
-  <h3><code>prevent_enter</code> — o mais simples, e útil</h3>
+  <h3><code>prevent_enter</code>: o mais simples, e útil</h3>
   <pre><code>'behaviors' =&gt; [['type' =&gt; 'prevent_enter']]</code></pre>
   <p>
     Existe para formulários que montam uma lista antes de enviar: ali o Enter no meio do
     preenchimento dispararia o envio com a lista pela metade. Não depende de nada do
-    host — é o único tipo que você pode usar hoje em qualquer projeto.
+    host. É o único tipo que você pode usar hoje em qualquer projeto.
   </p>
 
   <h3><code>token_insert</code></h3>
@@ -91,7 +91,7 @@
  'target'     =&gt; 'CorpoMensagem']          // campo que recebe o token</code></pre>
   <p>
     Insere na posição do cursor, preserva o resto do texto, reposiciona a seleção depois
-    do token e emite <code>input</code> — para que máscaras e contadores reajam. Também
+    do token e emite <code>input</code>, para que máscaras e contadores reajam. Também
     não depende do host.
   </p>
 
@@ -163,10 +163,10 @@
     <p>
       <strong>Divergência de nome de atributo.</strong> O gerador PHP do projeto de
       origem emite <code>data-submit-handler</code>, mas a engine registra plugins
-      procurando <code>data-&lt;nome&gt;-when</code> — ou seja,
+      procurando <code>data-&lt;nome&gt;-when</code>, ou seja,
       <code>data-submit-handler-when</code>. Do jeito que está, o atributo emitido nunca
-      é encontrado. O emissor desta pasta usa a forma com <code>-when</code>, que é a
-      que o runtime lê.
+      é encontrado. O <code>FormRenderer</code> usa a forma com <code>-when</code>,
+      que é a que o runtime lê.
     </p>
   </div>
 
@@ -179,9 +179,9 @@
   <div class="table-scroll">
     <table>
       <tr><th>Arquivo</th><th>Símbolos externos</th><th>Natureza</th></tr>
-      <tr><td><code>form-rule-behavior.js</code></td><td><code>DrawerService</code>, <code>refreshMutationTarget</code>, <code>openLinkDiv</code>, <code>openLink</code>, eventos <code>crm:drawer:*</code></td><td><strong>real</strong> — precisa virar adapter</td></tr>
+      <tr><td><code>form-rule-behavior.js</code></td><td><code>DrawerService</code>, <code>refreshMutationTarget</code>, <code>openLinkDiv</code>, <code>openLink</code>, eventos <code>crm:drawer:*</code></td><td><strong>real</strong>, precisa virar adapter</td></tr>
       <tr><td><code>form-rule-submit-handler.js</code></td><td><code>sendForm</code>, <code>DrawerService</code></td><td><strong>real</strong></td></tr>
-      <tr><td><code>form-rule-sequence.js</code></td><td><code>Swal</code>, Select2</td><td>parcial — <code>Swal</code> já é opcional</td></tr>
+      <tr><td><code>form-rule-sequence.js</code></td><td><code>Swal</code>, Select2</td><td>parcial, <code>Swal</code> já é opcional</td></tr>
       <tr><td><code>form-rule-dynamic-table.js</code></td><td><code>Swal</code></td><td>opcional, já protegido por <code>typeof</code></td></tr>
       <tr><td><code>form-rule-revert.js</code></td><td>Select2</td><td>parcial</td></tr>
       <tr><td><code>form-rule-engine.js</code></td><td><code>window.sendForm</code></td><td>já degrada sozinho</td></tr>
@@ -205,11 +205,11 @@
 
   <h2>6. O que fazer hoje</h2>
   <ul>
-    <li>Use <code>prevent_enter</code> e <code>token_insert</code> à vontade — não dependem de nada.</li>
+    <li>Use <code>prevent_enter</code> e <code>token_insert</code> à vontade, não dependem de nada.</li>
     <li>Para enviar, escreva o seu handler de submit chamando as verificações da
         <a href="?p=10-validacao-remota">página 10</a>. São dez linhas, e é o que a
         <a href="?p=17-casos-completos">página 17</a> faz.</li>
-    <li>Se quiser <code>ajax_submit</code>, defina as globais que ele espera — ou espere
+    <li>Se quiser <code>ajax_submit</code>, defina as globais que ele espera, ou espere
         o adapter.</li>
   </ul>
 

@@ -34,8 +34,8 @@
     <table>
       <tr><th>Ação</th><th>Chaves</th><th>Efeito</th></tr>
       <tr><td><code>set_value</code></td><td><code>field</code> + <code>value</code> ou <code>path</code></td><td>Grava um valor fixo, ou um valor tirado da resposta.</td></tr>
-      <tr><td><code>trigger</code></td><td><code>field</code>, <code>event</code></td><td>Dispara um evento no campo — é assim que se acorda um <code>fetch_when</code> vizinho.</td></tr>
-      <tr><td><code>refresh</code></td><td>—</td><td><code>engine.evaluateAll()</code>: reavalia todas as regras do formulário.</td></tr>
+      <tr><td><code>trigger</code></td><td><code>field</code>, <code>event</code></td><td>Dispara um evento no campo, é assim que se acorda um <code>fetch_when</code> vizinho.</td></tr>
+      <tr><td><code>refresh</code></td><td>nenhuma</td><td><code>engine.evaluateAll()</code>: reavalia todas as regras do formulário.</td></tr>
     </table>
   </div>
 
@@ -50,22 +50,22 @@
     <table>
       <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
       <tr><td><code>event</code></td><td><code>change</code></td><td>Evento do campo que dispara a consulta.</td></tr>
-      <tr><td><code>url</code></td><td>—</td><td>Template, com <code>{value}</code> e <code>{Campo}</code>.</td></tr>
+      <tr><td><code>url</code></td><td>sem padrão</td><td>Template, com <code>{value}</code> e <code>{Campo}</code>.</td></tr>
       <tr><td><code>method</code></td><td><code>POST</code></td><td>Note que o padrão aqui é POST, ao contrário do <code>fetch_when</code>.</td></tr>
-      <tr><td><code>data</code></td><td>—</td><td>Corpo da requisição; cada valor passa pelo template.</td></tr>
+      <tr><td><code>data</code></td><td>sem padrão</td><td>Corpo da requisição; cada valor passa pelo template.</td></tr>
       <tr><td><code>data_type</code></td><td><code>json</code></td><td>Repassado ao <code>$.ajax</code>.</td></tr>
       <tr><td><code>condition</code></td><td>sempre</td><td>Só consulta quando verdadeira.</td></tr>
       <tr><td><code>debounce</code></td><td><code>0</code></td><td>Milissegundos de espera antes de disparar.</td></tr>
       <tr><td><code>skip_empty</code></td><td><code>true</code></td><td>Não consulta com o campo vazio.</td></tr>
-      <tr><td><code>map</code></td><td>—</td><td>Campo → caminho na resposta.</td></tr>
-      <tr><td><code>chain</code></td><td>—</td><td>Ações pós-preenchimento (tabela da seção 2).</td></tr>
+      <tr><td><code>map</code></td><td>sem padrão</td><td>Campo → caminho na resposta.</td></tr>
+      <tr><td><code>chain</code></td><td>sem padrão</td><td>Ações pós-preenchimento (tabela da seção 2).</td></tr>
     </table>
   </div>
 
   <div class="warn">
     <p>
       <strong>Sem tratamento de falha.</strong> Requisição que falha só escreve no
-      console (<code>[FormRulePopulate] Falha ao carregar dados</code>) — não há
+      console (<code>[FormRulePopulate] Falha ao carregar dados</code>), não há
       <code>on_fail</code>, <code>message_fail</code> nem <code>clear_on_fail</code>.
       Se o usuário precisa saber que a consulta não deu certo, use
       <code>fetch_when</code>.
@@ -77,7 +77,7 @@
       <strong>Detalhe da implementação que às vezes confunde.</strong> As dependências
       deste plugin são as <em>chaves do <code>map</code></em>, ou seja, os campos de
       <strong>destino</strong>. Não é o que se esperaria (o natural seria o campo de
-      origem), mas na prática só afeta quando a regra é <em>religada</em> — a consulta
+      origem), mas na prática só afeta quando a regra é <em>religada</em>, a consulta
       em si é disparada pelo evento do campo, não pela reavaliação.
     </p>
   </div>

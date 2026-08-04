@@ -4,14 +4,14 @@
   <p class="lead">
     Medidor de força e checklist de critérios, montados a partir da política que o
     <strong>servidor</strong> devolve. Nenhuma regra de senha fica escrita no
-    JavaScript — trocar a política é trocar a resposta de uma rota.
+    JavaScript, trocar a política é trocar a resposta de uma rota.
   </p>
   <span class="deps">Dependências: <strong>jQuery</strong> · backend real em <code>examples/api.php</code></span>
 
   <h2>1. Em funcionamento</h2>
   <p>
     Digite na senha e observe o painel, que o plugin cria sozinho. A política deste
-    exemplo exige 8 caracteres, 1 número, 1 maiúscula e 1 caractere especial — e que a
+    exemplo exige 8 caracteres, 1 número, 1 maiúscula e 1 caractere especial, e que a
     confirmação bata.
   </p>
 
@@ -20,7 +20,7 @@
   <h2>2. O contrato da rota</h2>
   <p>
     O plugin faz um <code>POST</code> para <code>source</code> e espera este JSON.
-    Critério cujo limite é <code>0</code> (ou ausente) simplesmente não entra na lista —
+    Critério cujo limite é <code>0</code> (ou ausente) simplesmente não entra na lista
     é assim que se desliga uma exigência sem tocar no front.
   </p>
 
@@ -56,11 +56,11 @@
   <div class="table-scroll">
     <table>
       <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
-      <tr><td><code>source</code></td><td>—</td><td><strong>Obrigatória.</strong> Rota da política. Aceita o apelido <code>url</code>. É prefixada por <code>window.syspath</code>, se existir.</td></tr>
-      <tr><td><code>confirm_field</code></td><td>—</td><td>Nome do campo de confirmação. Sem ele, o critério "senhas coincidem" não aparece.</td></tr>
+      <tr><td><code>source</code></td><td>sem padrão</td><td><strong>Obrigatória.</strong> Rota da política. Aceita o apelido <code>url</code>. É prefixada por <code>window.syspath</code>, se existir.</td></tr>
+      <tr><td><code>confirm_field</code></td><td>sem padrão</td><td>Nome do campo de confirmação. Sem ele, o critério "senhas coincidem" não aparece.</td></tr>
       <tr><td><code>meter</code></td><td><code>true</code></td><td>Mostra a barra de força e a porcentagem.</td></tr>
       <tr><td><code>block_submit</code></td><td><code>true</code></td><td>Marca <code>data-erro="true"</code> no input enquanto a senha não cumpre tudo.</td></tr>
-      <tr><td><code>panel_target</code></td><td>—</td><td>Seletor CSS de onde inserir o painel. Sem ele, o plugin decide.</td></tr>
+      <tr><td><code>panel_target</code></td><td>sem padrão</td><td>Seletor CSS de onde inserir o painel. Sem ele, o plugin decide.</td></tr>
     </table>
   </div>
 
@@ -72,22 +72,23 @@
   </p>
   <ol>
     <li><code>panel_target</code>, se você declarou;</li>
-    <li>um <code>.ilu-form-compact__grid</code> ancestral — e então cria um slot de
+    <li>um <code>.ilu-form-compact__grid</code> ancestral, e então cria um slot de
         largura cheia <strong>no fim</strong> da grid;</li>
     <li>o próprio wrapper do campo, como último recurso.</li>
   </ol>
   <p>
     O "no fim da grid" também é deliberado: um bloco de 12 colunas inserido no meio
     quebraria a linha e empurraria os campos seguintes para baixo do painel. É por isso
-    que o emissor desta pasta envolve os campos em
-    <code>.ilu-form-compact__grid</code> — o nome da classe é parte do contrato.
+    que o <code>FormRenderer</code> envolve os campos em
+    <code>.ilu-form-compact__grid</code>: o nome da classe é parte do contrato entre o
+    gerador e o runtime, não decoração.
   </p>
 
   <h2>5. Como o bloqueio funciona</h2>
   <p>
     O plugin escreve <code>data-erro="true"</code> no input e adiciona
     <code>ilu-field-error</code>. <code>data-erro</code> é a convenção que o guarda de
-    envio legado já consulta — o plugin não intercepta o submit por conta própria.
+    envio legado já consulta. O plugin não intercepta o submit por conta própria.
   </p>
   <pre><code>form.addEventListener('submit', (e) =&gt; {
   const comErro = form.querySelector('[data-erro="true"]');
@@ -97,7 +98,7 @@
   <h2>6. Comportamentos que valem conhecer</h2>
   <ul>
     <li><strong>Campo vazio não bloqueia.</strong> O painel some e a validade volta a
-        <code>true</code> — obrigatoriedade é assunto do <code>required</code>.</li>
+        <code>true</code>: obrigatoriedade é assunto do <code>required</code>.</li>
     <li><strong>A política é cacheada por URL.</strong> Várias instâncias na mesma
         página compartilham um único <code>fetch</code>.</li>
     <li><strong>Falha de rede não é cacheada.</strong> Uma queda momentânea não pode
@@ -113,8 +114,8 @@
       Este plugin substituiu um par de funções globais
       (<code>checkPassword()</code>/<code>loadPassFormat()</code>) cujo JS inline
       apontava para IDs de markup que só existiam na tela de "Alterar senha". Nas telas
-      de cadastro e edição, o handler rodava contra um DOM inexistente e não fazia nada
-      — silenciosamente. É um bom exemplo do que a abordagem declarativa conserta: a
+      de cadastro e edição, o handler rodava contra um DOM inexistente e não fazia
+      nada, silenciosamente. É um bom exemplo do que a abordagem declarativa conserta: a
       regra passa a viajar junto com o campo.
     </p>
   </div>
@@ -127,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
     e.preventDefault();
     var comErro = form.querySelector('[data-erro="true"]');
     if (comErro) { Demo.toast('A senha ainda não cumpre a política.', 'error'); comErro.focus(); return; }
-    Demo.toast('Senha aceita — enviaria agora.', 'info');
+    Demo.toast('Senha aceita: enviaria agora.', 'info');
   });
 });
 </script>

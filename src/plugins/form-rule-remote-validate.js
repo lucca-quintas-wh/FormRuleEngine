@@ -80,10 +80,10 @@ window.FormRuleRemoteValidatePlugin = window.FormRuleRemoteValidatePlugin || cla
             }
 
             this.engine.registerRemoteValidation(name, normalizedValid, message);
-            input.classList.toggle('form-rule-invalid', this.engine.remoteValidations.has(name));
+            input.classList.toggle(this.temaClasses('invalid')[0], this.engine.remoteValidations.has(name));
             input.title = this.engine.remoteValidations.has(name) ? message : '';
         }).fail(() => {
-            this.engine.registerRemoteValidation(name, false, rule.message_fail || 'Falha na validação remota');
+            this.engine.registerRemoteValidation(name, false, rule.message_fail || window.FormRuleEngine.t('validacaoRemotaFalhou'));
         });
     }
 
@@ -112,7 +112,7 @@ window.FormRuleRemoteValidatePlugin = window.FormRuleRemoteValidatePlugin || cla
 
             const normalized = chainedValid === true || chainedValid === 'S' || chainedValid === 1 || chainedValid === '0';
             this.engine.registerRemoteValidation(name, normalized, chainedMessage);
-            input.classList.toggle('form-rule-invalid', this.engine.remoteValidations.has(name));
+            input.classList.toggle(this.temaClasses('invalid')[0], this.engine.remoteValidations.has(name));
             input.title = this.engine.remoteValidations.has(name) ? chainedMessage : '';
 
             const context = { response: chainedResponse, value, input };
@@ -123,7 +123,7 @@ window.FormRuleRemoteValidatePlugin = window.FormRuleRemoteValidatePlugin || cla
                 this.engine.runActions(chained.on_success, context);
             }
         }).fail(() => {
-            this.engine.registerRemoteValidation(name, false, chained.message_fail || rule.message_fail || 'Falha na validação remota');
+            this.engine.registerRemoteValidation(name, false, chained.message_fail || rule.message_fail || window.FormRuleEngine.t('validacaoRemotaFalhou'));
         });
     }
 };

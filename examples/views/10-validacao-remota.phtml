@@ -10,7 +10,7 @@
   <div class="warn">
     <p>
       <strong>Leia antes de testar.</strong> O bloqueio de envio embutido no núcleo só
-      se instala quando existe uma função global <code>sendForm</code> — a do CRM de
+      se instala quando existe uma função global <code>sendForm</code>, a do CRM de
       origem. Sem ela, <code>prevent_submit_when</code> registra as regras e ninguém as
       consulta, e a validação remota marca o campo mas não trava nada.
     </p>
@@ -25,7 +25,7 @@
   <?= fre_demo('10-remoto', ['aberto' => true]) ?>
 
   <p>
-    O runtime aceita como válido: <code>true</code>, <code>"S"</code>, <code>1</code> —
+    O runtime aceita como válido: <code>true</code>, <code>"S"</code>, <code>1</code>
     e também a <em>string</em> <code>"0"</code>, porque rotas legadas usavam 0 para
     "sem erro". Vale conferir o seu contrato antes de confiar no padrão.
   </p>
@@ -41,7 +41,7 @@
 
   <h3>Validação encadeada</h3>
   <p>
-    <code>then_if_invalid</code> faz uma segunda consulta quando a primeira reprova — o
+    <code>then_if_invalid</code> faz uma segunda consulta quando a primeira reprova, o
     caso real é "o documento já existe: está ativo ou pode ser reaproveitado?". A
     segunda resposta é que decide, e ela tem <code>on_success</code> /
     <code>on_fail</code> próprios.
@@ -82,7 +82,7 @@
   <div class="warn">
     <p>
       <strong>Armadilha da condição.</strong> Quando <code>condition</code> é falsa o
-      handler <em>retorna sem fazer nada</em> — inclusive sem executar o
+      handler <em>retorna sem fazer nada</em>, inclusive sem executar o
       <code>onclick</code> que ele removeu do botão. Se o botão tinha um
       <code>onclick</code> e a regra é condicional, prefira declarar as ações em
       <code>action</code>, para o comportamento não depender de qual ramo caiu.
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
       engine.showMessage('error', Array.from(remoto.remoteValidations.values())[0]);
       return;
     }
-    Demo.toast('Passou nas duas verificações — enviaria agora.', 'info');
+    Demo.toast('Passou nas duas verificações: enviaria agora.', 'info');
   });
 });
 </script>

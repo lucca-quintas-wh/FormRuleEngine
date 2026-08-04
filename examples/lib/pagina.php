@@ -5,13 +5,13 @@
  * A ideia do port: cada exemplo desta documentação é uma CONFIGURAÇÃO PHP
  * (`demos/*.php`), não HTML escrito à mão. A página mostra as três camadas:
  *
- *   1. o formulário funcionando  ← compilado pelo FormRuleCompiler
+ *   1. o formulário funcionando  ← gerado pelo FormRenderer
  *   2. a config PHP que o gerou  ← o fonte do arquivo, lido do disco
- *   3. o HTML compilado          ← a saída do emissor
+ *   3. o HTML gerado             ← a saída de FormRenderer::renderForm()
  *
- * Como as três vêm da MESMA fonte, elas não podem divergir — que era a
- * propriedade que a versão em HTML garantia clonando um <template>, e que aqui
- * fica mais forte, porque a fonte agora é a config, e não o markup.
+ * Como as três vêm da MESMA fonte, elas não podem divergir. Era a propriedade
+ * que a versão em HTML garantia clonando um <template>, e aqui fica mais forte,
+ * porque a fonte agora é a config, e não o markup.
  */
 
 require_once __DIR__ . '/form_builder.php';
@@ -51,7 +51,7 @@ function fre_demo(string $slug, array $opcoes = []): string
   <div class="demo-live"><?= $html ?></div>
 
   <details class="demo-code"<?= !empty($opcoes['aberto']) ? ' open' : '' ?>>
-    <summary><?= fre_e($opcoes['titulo_config'] ?? 'A config PHP — demos/' . $slug . '.php') ?></summary>
+    <summary><?= fre_e($opcoes['titulo_config'] ?? 'A config PHP: demos/' . $slug . '.php') ?></summary>
     <pre><code><?= fre_e($fonte) ?></code></pre>
   </details>
 
@@ -103,7 +103,7 @@ function fre_pagina_inicio(string $slug): void
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= fre_e($meta['n'] . ' · ' . $meta['titulo']) ?> — Form Rule Engine</title>
+<title><?= fre_e($meta['n'] . ' · ' . $meta['titulo']) ?> · Form Rule Engine</title>
 <link rel="stylesheet" href="assets/demo.css">
 </head>
 <body>
@@ -127,7 +127,7 @@ function fre_pagina_inicio(string $slug): void
 /**
  * Rodapé: painéis auxiliares e as tags <script> na ordem certa.
  *
- * A lista de plugins sai das configs renderizadas na página — o mesmo cálculo
+ * A lista de plugins sai das configs renderizadas na página, o mesmo cálculo
  * que um controller faria para não mandar ao navegador o que a tela não usa.
  *
  * @param array $opcoes 'form_estado' => nome do form a espelhar no painel

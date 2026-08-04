@@ -1,6 +1,6 @@
 <?php
 /**
- * Opções dependentes de outro campo — o formato mais direto do `options_when`.
+ * Opções dependentes de outro campo, o formato mais direto do `options_when`.
  *
  * `depends_on` aponta o campo pai; `options` é um dicionário
  * "valor do pai → conjunto de opções", e cada conjunto é um mapa valor: rótulo.

@@ -35,7 +35,7 @@ window.FormRuleLockPlugin = window.FormRuleLockPlugin || class FormRuleLockPlugi
         }
 
         // O próprio target também é uma dependência implícita
-        // (para reavaliar quando o target muda, embora raro)
+        // (para reevaluate quando o target muda, embora raro)
         if (rules.target) {
             deps.add(rules.target);
         }
@@ -60,7 +60,7 @@ window.FormRuleLockPlugin = window.FormRuleLockPlugin || class FormRuleLockPlugi
             return;
         }
 
-        const wrapper = targetField.closest('.ilu-form-field, .drawer-form-field, .form-group');
+        const wrapper = targetField.closest(this.tema('lockWrapper'));
 
         if (isLocked) {
             this.lockField(targetField, wrapper, lockValue, restoreOnUnlock);
@@ -93,9 +93,9 @@ window.FormRuleLockPlugin = window.FormRuleLockPlugin || class FormRuleLockPlugi
 
         // Adiciona classe visual
         if (wrapper) {
-            wrapper.classList.add('form-rule-locked');
+            wrapper.classList.add(...this.temaClasses('locked'));
         }
-        field.classList.add('form-rule-locked-input');
+        field.classList.add(...this.temaClasses('lockedInput'));
     }
 
     unlockField(field, wrapper, restoreOnUnlock) {
@@ -116,8 +116,8 @@ window.FormRuleLockPlugin = window.FormRuleLockPlugin || class FormRuleLockPlugi
 
         // Remove classe visual
         if (wrapper) {
-            wrapper.classList.remove('form-rule-locked');
+            wrapper.classList.remove(...this.temaClasses('locked'));
         }
-        field.classList.remove('form-rule-locked-input');
+        field.classList.remove(...this.temaClasses('lockedInput'));
     }
 };

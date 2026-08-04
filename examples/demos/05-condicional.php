@@ -2,7 +2,7 @@
 /**
  * set_value_when sob condição.
  *
- * A regra é uma LISTA e TODOS os itens são avaliados — não só o primeiro que
+ * A regra é uma LISTA e TODOS os itens são avaliados, não só o primeiro que
  * casa. É por isso que a última linha (condição valor vazio) consegue limpar
  * quando o usuário volta ao placeholder: sem ela, o plugin não desfaz nada.
  */

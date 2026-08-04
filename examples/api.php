@@ -1,13 +1,13 @@
 <?php
 /**
- * api.php — o "outro lado" das regras que falam com o servidor.
+ * api.php, o "outro lado" das regras que falam com o servidor.
  *
  * `fetch_when`, `populate_when`, `remote_validate_when` e o plugin `password`
  * não inventam formato: cada um espera uma resposta com uma forma específica.
  * Este controller devolve exatamente essas formas, então ele serve tanto de
  * backend dos exemplos quanto de especificação do que implementar no seu.
  *
- * Uma rota por `?acao=`. Sem framework, sem banco — arrays em memória.
+ * Uma rota por `?acao=`. Sem framework, sem banco, arrays em memória.
  */
 
 header('Content-Type: application/json; charset=utf-8');
@@ -22,7 +22,7 @@ usleep(220000);
 switch ($acao) {
 
     /* ─────────────────────────────────────────────────────────────────────
-       CEP — consumido por `fetch_when` com `map`.
+       CEP, consumido por `fetch_when` com `map`.
        Contrato: objeto plano. O `map` da regra decide qual chave vai em qual
        campo: {"Logradouro":"logradouro","Bairro":"bairro"}.
        ───────────────────────────────────────────────────────────────────── */
@@ -42,7 +42,7 @@ switch ($acao) {
         break;
 
     /* ─────────────────────────────────────────────────────────────────────
-       CNPJ — consumido por `populate_when`, que espalha a resposta por vários
+       CNPJ: consumido por `populate_when`, que espalha a resposta por vários
        campos de uma vez. Mesmo contrato do CEP: objeto plano + `map`.
        ───────────────────────────────────────────────────────────────────── */
     case 'cnpj':
@@ -69,7 +69,7 @@ switch ($acao) {
         break;
 
     /* ─────────────────────────────────────────────────────────────────────
-       Cascata de combos — consumido por `fetch_when` com `map_options`.
+       Cascata de combos, consumido por `fetch_when` com `map_options`.
        Contrato: {"data": [{"VALUE": …, "DISPLAY": …}, …]}.
        As chaves são configuráveis (`value_key`/`label_key`) e o caminho da
        lista dentro da resposta também (`path`, padrão "data").
@@ -105,7 +105,7 @@ switch ($acao) {
         break;
 
     /* ─────────────────────────────────────────────────────────────────────
-       Detalhe de lead — consumido por `populate_when` com `chain`.
+       Detalhe de lead, consumido por `populate_when` com `chain`.
        Mesmo contrato do CNPJ: objeto plano, e o `map` da regra escolhe o que
        vai em qual campo.
        ───────────────────────────────────────────────────────────────────── */
@@ -119,11 +119,11 @@ switch ($acao) {
         break;
 
     /* ─────────────────────────────────────────────────────────────────────
-       Validação remota — consumida por `remote_validate_when`.
+       Validação remota, consumida por `remote_validate_when`.
        Contrato padrão: {"valid": bool, "message": string}. Os caminhos são
        configuráveis por `valid_path` e `message_path`.
 
-       O runtime aceita como "válido": true, "S", 1 e a string "0" — esta
+       O runtime aceita como "válido": true, "S", 1 e a string "0", esta
        última porque rotas legadas devolviam 0 = sem erro.
        ───────────────────────────────────────────────────────────────────── */
     case 'valida-email':
@@ -136,7 +136,7 @@ switch ($acao) {
         ], JSON_UNESCAPED_UNICODE);
         break;
 
-    /* Formato legado separado por "|" — `response_type: "pipe"`.
+    /* Formato legado separado por "|", `response_type: "pipe"`.
        "mensagem|codigo", onde codigo 0 significa OK. */
     case 'valida-cpf-pipe':
         header('Content-Type: text/plain; charset=utf-8');
@@ -147,7 +147,7 @@ switch ($acao) {
     /* ─────────────────────────────────────────────────────────────────────
        Cascata por LINHA da tabela dinâmica.
        Formato do iluDynamicTable: um ARRAY direto (não `{data: […]}`), com
-       VALUE/DISPLAY ou value/display — as rotas legadas não eram consistentes
+       VALUE/DISPLAY ou value/display, as rotas legadas não eram consistentes
        no caso das chaves, e o plugin lê as duas formas.
        ───────────────────────────────────────────────────────────────────── */
     case 'planos':
@@ -160,7 +160,7 @@ switch ($acao) {
         break;
 
     /* ─────────────────────────────────────────────────────────────────────
-       Política de senha — consumida pelo plugin `password`.
+       Política de senha, consumida pelo plugin `password`.
        Limites numéricos + os rótulos aviso1..aviso5, exatamente como no CRM
        de origem. O plugin monta o checklist a partir disto: critério cujo
        limite é 0 nem aparece na lista.
@@ -183,7 +183,7 @@ switch ($acao) {
 
     /* ─────────────────────────────────────────────────────────────────────
        Recebe o formulário. Devolve o que chegou, para dar para conferir o que
-       de fato foi serializado — inclusive o que NÃO chegou: campo `disabled`
+       de fato foi serializado, inclusive o que NÃO chegou: campo `disabled`
        (por `disabled_when` ou `lock_when`) não é enviado pelo navegador.
        ───────────────────────────────────────────────────────────────────── */
     case 'salvar':

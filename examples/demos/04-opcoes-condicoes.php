@@ -3,7 +3,7 @@
  * O segundo formato do `options_when`: uma lista, como a do `label_when`. Cada
  * item tem uma condição (qualquer uma da DSL) e a chave `options`.
  *
- * Quando NENHUMA regra casa, o plugin restaura as opções originais do HTML —
+ * Quando NENHUMA regra casa, o plugin restaura as opções originais do HTML:
  * ele fotografa a lista inicial na primeira avaliação.
  */
 

@@ -1,10 +1,10 @@
 <?php
 /**
  * action_when é o único plugin cujo atributo vai no PRÓPRIO botão, não num
- * wrapper — ele age no elemento onde está. E carrega DUAS regras dentro do
+ * wrapper: ele age no elemento onde está. E carrega DUAS regras dentro do
  * mesmo atributo: visible_when e enabled_when.
  *
- * Na config isso aparece como duas chaves do botão; o emissor as junta em
+ * Na config isso aparece como duas chaves do botão; o FormRenderer as junta em
  * data-action-when. Abra "o HTML compilado" para ver.
  */
 

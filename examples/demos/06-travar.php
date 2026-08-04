@@ -5,7 +5,7 @@
  *
  * O wrapper que recebe a classe visual é procurado com
  * closest('.ilu-form-field, .drawer-form-field, .form-group') a partir do campo
- * alvo — daí o `wrapper_class` no campo travado.
+ * alvo, daí o `wrapper_class` no campo travado.
  */
 
 return [

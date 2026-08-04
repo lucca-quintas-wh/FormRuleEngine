@@ -25,7 +25,7 @@ $meta = $casos[$caso];
   <p class="lead">
     As páginas anteriores isolam uma regra por vez. Aqui estão quatro formulários
     <strong>inteiros</strong>, do tamanho e da forma que sairiam de um controller de
-    verdade — com as regras se cruzando, que é onde as interações interessantes
+    verdade: com as regras se cruzando, que é onde as interações interessantes
     aparecem.
   </p>
 
@@ -52,12 +52,12 @@ $meta = $casos[$caso];
     campo desabilitado por <code>disabled_when</code> ou trancado por
     <code>lock_when</code> não é serializado pelo navegador.
   </p>
-  <pre id="respostaServidor">— envie o formulário para ver a resposta —</pre>
+  <pre id="respostaServidor">, envie o formulário para ver a resposta, </pre>
 
   <div class="note">
     <p>
       <strong>Sobre o <code>prevent_submit_when</code>.</strong> O guarda de envio do
-      núcleo só se instala quando existe uma função global <code>sendForm</code> — a do
+      núcleo só se instala quando existe uma função global <code>sendForm</code>, a do
       CRM de origem. Sem ela, o plugin registra as regras e ninguém as consulta. Em
       código novo, o gancho é chamar
       <code>plugin.validateBeforeSubmit(nomeDoForm)</code> no seu handler de submit,

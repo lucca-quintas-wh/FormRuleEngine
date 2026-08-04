@@ -4,7 +4,7 @@
   <p class="lead">
     Os dois plugins que <em>escrevem</em> em campos. Ambos gravam por
     <strong>nome</strong> (<code>target</code> / as chaves de <code>values</code>), não
-    no elemento onde a regra está — o que significa que a regra pode morar em qualquer
+    no elemento onde a regra está, o que significa que a regra pode morar em qualquer
     lugar do formulário.
   </p>
   <span class="deps">Dependências: <strong>nenhuma</strong></span>
@@ -27,7 +27,7 @@
       <strong>Sobrescreve o que o usuário digitou.</strong> A regra roda a cada
       mudança de dependência e não sabe se o valor atual veio dela ou de uma pessoa.
       Para campos que o usuário também edita, prefira <code>copy_when</code> (que
-      guarda o valor original) ou <code>lock_when</code> (que trava e restaura) — veja
+      guarda o valor original) ou <code>lock_when</code> (que trava e restaura). Veja
       a <a href="?p=06-copiar-travar-reverter">página 06</a>.
     </p>
   </div>
@@ -37,7 +37,7 @@
     <code>computed_when</code> com <code>expression</code>: o template é resolvido e,
     <strong>se</strong> o resultado contiver apenas números e
     <code>+ - * / ( ) . ,</code>, é avaliado como aritmética. Qualquer outro caractere
-    faz o plugin devolver a string resolvida como está — o que transforma o mesmo
+    faz o plugin devolver a string resolvida como está, o que transforma o mesmo
     mecanismo em concatenação de texto.
   </p>
 
@@ -50,7 +50,7 @@
       <code>computed_when</code> tem <code>'target' =&gt; 'Subtotal'</code> numa regra
       e <code>{Subtotal}</code> na outra, <code>Subtotal</code> vira dependência do
       próprio elemento. Gravar dispara <code>change</code>, que reavalia o elemento,
-      que grava de novo — <strong>laço infinito</strong>, e a aba trava.
+      que grava de novo: <strong>laço infinito</strong>, e a aba trava.
     </p>
     <p>
       A regra prática: agrupe no mesmo atributo apenas cálculos <em>irmãos</em> (que
@@ -64,7 +64,7 @@
       <strong>Por que não é <code>eval</code> livre.</strong> A expressão só é
       executada depois de passar por <code>/^[0-9+\-*/ ().,]+$/</code>. Um valor de
       campo com letras não vira código: cai no ramo de texto. Ainda assim, a
-      substituição acontece antes do teste — trate <code>expression</code> como parte
+      substituição acontece antes do teste. Trate <code>expression</code> como parte
       do seu template server-side, não como algo que o usuário final compõe.
     </p>
   </div>
@@ -73,7 +73,7 @@
     <p>
       <strong>Formatado é para mostrar; cru é para comparar.</strong> Os comparadores
       numéricos da DSL usam <code>parseFloat</code>, e
-      <code>parseFloat("1.234,56")</code> devolve <code>1.234</code> — o ponto vira
+      <code>parseFloat("1.234,56")</code> devolve <code>1.234</code>: o ponto vira
       decimal. Se um campo formatado precisa entrar numa condição, mantenha ao lado
       uma cópia crua num <code>hidden</code>: é um campo e uma regra a mais, e evita
       uma classe inteira de bug silencioso. O
@@ -85,7 +85,7 @@
 
   <?= fre_demo('05-idade') ?>
 
-  <p>Com faixas explícitas, o formato é este — e <code>lt</code> cobre o "abaixo de":</p>
+  <p>Com faixas explícitas, o formato é este, e <code>lt</code> cobre o "abaixo de":</p>
   <pre><code>'computed_when' =&gt; [
     'target' =&gt; 'Faixa', 'type' =&gt; 'age_band', 'source' =&gt; 'Nascimento',
     'bands'  =&gt; [

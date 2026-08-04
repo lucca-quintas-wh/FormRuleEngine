@@ -1,5 +1,5 @@
 /**
- * Plugin: step — Wizard com steps
+ * Plugin: step, Wizard com steps
  * Gerencia navegacao entre steps, validacao, skip rules.
  * Reutilizavel em qualquer form que usar 'step' => N nas sections.
  */
@@ -13,7 +13,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
         this.labels = [];
         this.icons = [];
         this.submitOnclick = '';
-        this.submitLabel = 'Salvar';
+        this.submitLabel = window.FormRuleEngine.t('salvar');
         this.navTarget = '';
         this.autoAdvance = false;
         this.showNav = true;
@@ -46,7 +46,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
                 this.showStepper = config.show_stepper !== false;
                 this.showSubmit = config.show_submit !== false;
                 this.submitOnclick = config.submit_onclick || '';
-                this.submitLabel = config.submit_label || 'Salvar';
+                this.submitLabel = config.submit_label || window.FormRuleEngine.t('salvar');
                 this.navTarget = config.nav_target || '';
 
                 if (Array.isArray(config.steps)) {
@@ -93,7 +93,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
     }
 
     resolveChromeTarget(form) {
-        return form.querySelector('.ilu-form-compact--steps') || form;
+        return form.querySelector(this.tema('stepChrome')) || form;
     }
 
     renderProgress(form) {
@@ -110,7 +110,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
         stepper.setAttribute('role', 'tablist');
 
         for (let i = 1; i <= this.totalSteps; i++) {
-            const label = this.labels[i - 1] || `Etapa ${i}`;
+            const label = this.labels[i - 1] || window.FormRuleEngine.t('etapa', { n: i });
             const icon = this.icons[i - 1] || '';
             const item = document.createElement('button');
             item.type = 'button';
@@ -152,10 +152,10 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
         const nav = document.createElement('div');
         nav.className = 'step-nav';
         nav.innerHTML = `
-            <button type="button" class="btn btn-v5-secondary step-prev">Anterior</button>
+            <button type="button" class="btn btn-v5-secondary step-prev">${window.FormRuleEngine.t('anterior')}</button>
             <span class="step-nav-info"></span>
-            <button type="button" class="btn btn-v5-primary step-next">Próximo</button>
-            <button type="button" class="btn btn-v5-primary step-submit">Salvar</button>
+            <button type="button" class="btn btn-v5-primary step-next">${window.FormRuleEngine.t('proximo')}</button>
+            <button type="button" class="btn btn-v5-primary step-submit">${window.FormRuleEngine.t('salvar')}</button>
         `;
         const target = this.resolveNavTarget(form);
         target.appendChild(nav);
@@ -169,14 +169,14 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
     }
 
     /**
-     * Elementos que pertencem a UM passo — `data-step-only="2"` (aceita lista:
+     * Elementos que pertencem a UM passo, `data-step-only="2"` (aceita lista:
      * "2,3"). Generaliza o que os botões de nav já faziam: um controle que mora
      * FORA do form (footer do drawer) e só faz sentido em determinado passo.
      * O caso que originou: o botão "IA" lê um documento e preenche os campos de
      * dados pessoais; no passo do contrato ele não tem o que preencher.
      *
      * Re-consultado a cada activateStep porque o footer do drawer é injetado por
-     * AJAX e pode nascer depois do init — o mesmo motivo que faz o resto do
+     * AJAX e pode nascer depois do init, o mesmo motivo que faz o resto do
      * módulo ser idempotente.
      */
     applyStepScopedVisibility() {
@@ -187,12 +187,12 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
 
         document.querySelectorAll('[data-step-only]').forEach(el => {
             if (!escopo(el)) return;
-            const passos = String(el.getAttribute('data-step-only') || '')
+            const steps = String(el.getAttribute('data-step-only') || '')
                 .split(',')
                 .map(n => parseInt(n, 10))
                 .filter(n => !isNaN(n));
-            if (!passos.length) return;
-            el.style.display = passos.indexOf(this.currentStep) !== -1 ? '' : 'none';
+            if (!steps.length) return;
+            el.style.display = steps.indexOf(this.currentStep) !== -1 ? '' : 'none';
         });
     }
 
@@ -302,8 +302,8 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
             this.navSubmit.style.display = (this.showSubmit && this.currentStep >= this.lastVisibleStep()) ? '' : 'none';
         }
         if (this.navInfo) {
-            const label = this.labels[this.currentStep - 1] || `Etapa ${this.currentStep}`;
-            this.navInfo.textContent = `${this.currentStep} de ${this.lastVisibleStep()} - ${label}`;
+            const label = this.labels[this.currentStep - 1] || window.FormRuleEngine.t('etapa', { n: this.currentStep });
+            this.navInfo.textContent = window.FormRuleEngine.t('etapaDeTotal', { atual: this.currentStep, total: this.lastVisibleStep(), rotulo: label });
         }
 
         this.applyStepScopedVisibility();
@@ -408,7 +408,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
 
     validateStep(stepEl) {
         // Obrigatório por atributo [required] OU pela classe .required (convenção
-        // deste app — SFieldAutoComplete/combos marcam a classe, não o atributo).
+        // deste app: SFieldAutoComplete/combos marcam a classe, não o atributo).
         const candidates = new Set([
             ...stepEl.querySelectorAll('[required]'),
             ...stepEl.querySelectorAll('input.required, select.required, textarea.required'),
@@ -419,7 +419,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
             if (field.offsetParent === null) continue;
             const valueEl = this.resolveValidationValueEl(field);
             if (!valueEl.value || valueEl.value === '') {
-                this.setFieldError(field, 'Campo obrigatório');
+                this.setFieldError(field, window.FormRuleEngine.t('campoObrigatorio'));
                 if (isValid) field.focus();
                 isValid = false;
             } else {
@@ -427,17 +427,17 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
             }
         }
         if (!isValid && typeof message === 'function') {
-            message('Preencha os campos obrigatórios desta etapa', 3000, 'error');
+            message(window.FormRuleEngine.t('camposDaEtapa'), 3000, 'error');
         }
         return isValid;
     }
 
-    // Autocomplete: o valor SELECIONADO mora no hidden .crm-autocomplete-value —
+    // Autocomplete: o valor SELECIONADO mora no hidden do tema (autocompleteValue)
     // validar o input de texto deixaria passar texto digitado sem escolher item.
     resolveValidationValueEl(field) {
-        const wrap = field.closest('.crm-autocomplete-wrapper');
+        const wrap = field.closest(this.tema('autocompleteWrap'));
         if (wrap) {
-            const hidden = wrap.querySelector('.crm-autocomplete-value');
+            const hidden = wrap.querySelector(this.tema('autocompleteValue'));
             if (hidden) return hidden;
         }
         return field;
@@ -445,7 +445,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
 
     setFieldError(field, text) {
         field.setAttribute('aria-invalid', 'true');
-        const wrapper = field.closest('.ilu-form-compact__field, .conta-wizard-v2__field, .form-group') || field.parentElement;
+        const wrapper = field.closest(this.tema('stepFieldWrapper')) || field.parentElement;
         if (!wrapper) return;
 
         wrapper.classList.add('form-step-field-error');
@@ -460,7 +460,7 @@ window.FormRuleStepPlugin = window.FormRuleStepPlugin || class FormRuleStepPlugi
 
     clearFieldError(field) {
         field.removeAttribute('aria-invalid');
-        const wrapper = field.closest('.ilu-form-compact__field, .conta-wizard-v2__field, .form-group') || field.parentElement;
+        const wrapper = field.closest(this.tema('stepFieldWrapper')) || field.parentElement;
         if (!wrapper) return;
 
         wrapper.classList.remove('form-step-field-error');

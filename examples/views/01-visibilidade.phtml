@@ -3,7 +3,7 @@
   <h1><code>visible_when</code></h1>
   <p class="lead">
     Mostra ou esconde o elemento onde o atributo cai. É o único plugin que age no
-    próprio elemento em vez de procurar um input dentro dele — por isso funciona
+    próprio elemento em vez de procurar um input dentro dele, por isso funciona
     tanto num campo quanto numa seção inteira.
   </p>
   <span class="deps">Dependências: <strong>nenhuma</strong></span>
@@ -13,7 +13,7 @@
     A condição é reavaliada a cada mudança de qualquer campo citado nela. Abra a
     config e repare em <code>'type' =&gt; 'group'</code>: ele <strong>propaga</strong> a
     condição para cada campo filho, que é o que o gerador do projeto de origem faz.
-    No HTML compilado não existe wrapper de grupo — cada campo sai com o seu próprio
+    No HTML compilado não existe wrapper de grupo, cada campo sai com o seu próprio
     <code>data-visible-when</code>. É por isso que, num formulário real, você vê a
     mesma condição repetida em campos vizinhos.
   </p>
@@ -58,24 +58,25 @@
 
   <?= fre_demo('01-composta') ?>
 
-  <div class="warn">
+  <div class="tip">
     <p>
-      <strong>Pertinência com exatamente dois valores não funciona.</strong>
-      <code>['Uf' =&gt; ['SP','RJ']]</code> é indistinguível, para o compilador, de um
-      par posicional <code>['operador', valor]</code> — e ele decide a favor do
-      operador, emitindo <code>{"Uf":{"sp":"RJ"}}</code>, que o runtime não conhece e
-      avalia como falso para sempre. Com um ou três valores funciona; falhar só em
-      dois é pior do que falhar sempre.
+      <strong>Pertinência com dois valores costumava falhar aqui.</strong>
+      <code>['Uf' =&gt; ['SP','RJ']]</code> era indistinguível, para o compilador, de
+      um par posicional <code>['operador', valor]</code>, e ele decidia pelo
+      operador, emitindo <code>{"Uf":{"sp":"RJ"}}</code>: condição eternamente
+      falsa, sem aviso. Hoje o par posicional só é reconhecido quando o primeiro
+      elemento <em>é</em> um operador conhecido, então as duas formas convivem:
     </p>
-    <pre><code>['Uf' =&gt; ['SP', 'RJ']]                        // ⚠ sempre falso
-['OR' =&gt; [['Uf' =&gt; 'SP'], ['Uf' =&gt; 'RJ']]]    // certo</code></pre>
+    <pre><code>['Uf' =&gt; ['SP', 'RJ']]     // pertinência
+['Uf' =&gt; ['!=', '']]       // par posicional
+['Uf' =&gt; ['in' =&gt; ['SP', 'RJ']]]   // explícito, se preferir</code></pre>
   </div>
 
   <h2>4. Um campo, vários blocos</h2>
   <p>
     Não há limite nem ordem. A engine monta um mapa <em>campo → elementos que
     dependem dele</em> no registro do plugin, e ao mudar um campo reavalia só esses
-    elementos — não há varredura do formulário a cada tecla.
+    elementos, não há varredura do formulário a cada tecla.
   </p>
 
   <?= fre_demo('01-varios-blocos') ?>
@@ -97,7 +98,7 @@
   <h2>6. Elementos fora do formulário</h2>
   <p>
     O bootstrap adota elementos com <code>data-visible-when</code> que estão
-    <strong>fora</strong> do <code>&lt;form&gt;</code> — o caso real são painéis de um
+    <strong>fora</strong> do <code>&lt;form&gt;</code>. O caso real são painéis de um
     drawer declarados pelo controller. A guarda importante: ele só adota o que não
     pertence a outro formulário, senão dois formulários aninhados esconderiam as
     seções um do outro.
@@ -121,13 +122,13 @@
                       . ' class="note" style="margin-top:16px">'
                       . '<p>Este bloco está fora do <code>&lt;form&gt;</code> e mesmo assim '
                       . 'reage ao campo acima.</p></div>',
-      ], 'A config — repare em after_form') ?>
+      ], 'A config, repare em after_form') ?>
 
   <h2>7. Evento emitido</h2>
   <p>
     Toda vez que a visibilidade muda, o elemento dispara
     <code>visibility:changed</code> (borbulhando), com <code>detail.visible</code>. O
-    painel de eventos no fim da página está escutando — é assim que o plugin
+    painel de eventos no fim da página está escutando. É assim que o plugin
     <code>step</code> descobre que uma etapa inteira sumiu.
   </p>
   <pre><code>form.addEventListener('visibility:changed', (e) =&gt; {
@@ -139,7 +140,7 @@
       <strong>Esconder não remove do envio.</strong> <code>display:none</code> não
       desabilita nada, e um campo oculto continua sendo serializado com o valor que
       tinha. Se o ramo abandonado não pode chegar ao servidor, use
-      <code>'clear_on_hide' =&gt; true</code> — ou combine com
+      <code>'clear_on_hide' =&gt; true</code>: ou combine com
       <code>disabled_when</code>, já que campo desabilitado não é enviado.
     </p>
   </div>

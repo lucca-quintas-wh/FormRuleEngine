@@ -4,7 +4,7 @@
  * É o teste que as duas metades sozinhas não conseguem fazer. O teste PHP prova
  * que o compilador produz o JSON que ele acha certo; o smoke test JS prova que o
  * runtime entende o JSON que ELE acha certo. Só este aqui prova que são o mesmo
- * JSON — que é exatamente onde um contrato entre duas linguagens costuma rachar.
+ * JSON, que é exatamente onde um contrato entre duas linguagens costuma rachar.
  *
  * Pula (sem falhar) se o PHP não estiver disponível.
  */
@@ -34,11 +34,16 @@ const CASOS = [
     ['OR explícito',             "['OR' => [['Tipo' => 'A'], ['Tipo' => 'B']]]", 'B',  true],
     ['lista = AND implícito',    "[['Tipo' => 'A'], ['Tipo' => 'A']]",           'A',  true],
 
-    // A armadilha: 2 valores é indistinguível de [operador, valor]. O compilador
-    // resolve a favor do operador, então a pertinência NUNCA casa. Fixado aqui
-    // como comportamento CONHECIDO, não como comportamento desejado.
-    ['ARMADILHA: 2 valores',     "['Tipo' => ['A', 'B']]",                       'A',  false],
-    ['ARMADILHA: 2 valores (b)', "['Tipo' => ['A', 'B']]",                       'B',  false],
+    // Pertinência com 2 valores. Já foi a armadilha do compilador: a lista era
+    // indistinguível de [operador, valor] e ele decidia pelo operador, emitindo
+    // {"Tipo":{"a":"B"}}, condição permanentemente falsa. Hoje o par posicional
+    // só é reconhecido quando o primeiro elemento É um operador conhecido.
+    ['pertence a (2 valores)',   "['Tipo' => ['A', 'B']]",                       'A',  true],
+    ['pertence a (2, o outro)',  "['Tipo' => ['A', 'B']]",                       'B',  true],
+    ['pertence a (2, fora)',     "['Tipo' => ['A', 'B']]",                       'C',  false],
+    // E o par posicional continua sendo par posicional.
+    ['posicional != com 2',      "['Tipo' => ['!=', 'A']]",                      'B',  true],
+    ['posicional != com 2 (b)',  "['Tipo' => ['!=', 'A']]",                      'A',  false],
 ];
 
 function compilarComPhp() {
@@ -61,7 +66,7 @@ let compilados;
 try {
     compilados = compilarComPhp();
 } catch (e) {
-    console.log('PHP indisponível — teste cruzado pulado.');
+    console.log('PHP indisponível, teste cruzado pulado.');
     console.log(`(${e.message.split('\n')[0]})`);
     process.exit(0);
 }

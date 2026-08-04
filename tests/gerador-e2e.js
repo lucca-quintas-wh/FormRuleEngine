@@ -1,7 +1,7 @@
 /**
  * Pilha completa: FormRenderer gera o formulário, o runtime o executa.
  *
- * Os outros testes cobrem pedaços — o compilador contra o trait de origem, o
+ * Os outros testes cobrem pedaços: o compilador contra o trait de origem, o
  * runtime contra HTML escrito à mão, e o cruzado só a condição. Este parte de
  * uma CONFIG, como um usuário real, e verifica o comportamento no DOM. É o que
  * pega erro de posicionamento de atributo: o compilador pode emitir o JSON certo
@@ -75,7 +75,7 @@ let gerado;
 try {
     gerado = gerar();
 } catch (e) {
-    console.log('PHP indisponível — teste do gerador pulado.');
+    console.log('PHP indisponível, teste do gerador pulado.');
     console.log(`(${e.message.split('\n')[0]})`);
     process.exit(0);
 }

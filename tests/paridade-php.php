@@ -3,7 +3,7 @@
  * Paridade entre o interpretador extraído (src/php/FormRuleCompiler.php) e o
  * trait de origem (reference/php/FormRenderer.php).
  *
- * O trait não roda sozinho — é um trait, e seus métodos citam System, SField*,
+ * O trait não roda sozinho: é um trait, e seus métodos citam System, SField*,
  * UiNode, RenderSchema. Mas PHP resolve isso na CHAMADA, não na composição:
  * dá para compor o trait numa classe de teste e exercitar só os métodos do
  * interpretador, que não tocam em nada disso. É o que este harness faz, e é o
@@ -38,7 +38,7 @@ $origem = new OrigemHarness();
 
 $casos = [
     'igualdade simples'          => ['Tipo' => 'F'],
-    'array = pertence a'         => ['Uf' => ['SP', 'RJ']],
+    'array = pertence a (3)'     => ['Uf' => ['SP', 'RJ', 'MG']],
     'operador explícito'         => ['Status' => ['!=' => 'C']],
     'alias = vira eq'            => ['Status' => ['=' => 'A']],
     'alias <> vira !='           => ['Status' => ['<>' => 'A']],
@@ -76,6 +76,57 @@ foreach ($casos as $nome => $entrada) {
 
     $falhas++;
     printf(" FALHA | %-28s\n         origem  : %s\n         extraído: %s\n", $nome, $esperado, $obtido);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DIVERGÊNCIAS DELIBERADAS
+
+   A partir daqui o extraído NÃO acompanha o trait de origem, de propósito. Cada
+   caso afirma as duas coisas: que a origem produz o resultado antigo, e que nós
+   produzimos o novo. Se a origem for corrigida um dia, este teste avisa.
+
+   Sem isto, "consertei um bug" e "quebrei a paridade" ficam indistinguíveis.
+   ───────────────────────────────────────────────────────────────────────── */
+
+$divergencias = [
+    [
+        'nome'    => 'pertinência com 2 valores',
+        'entrada' => ['Uf' => ['SP', 'RJ']],
+        'origem'  => '{"Uf":{"sp":"RJ"}}',
+        'nosso'   => '{"Uf":["SP","RJ"]}',
+        'porque'  => 'a lista de 2 era lida como [operador, valor]; o operador "sp" não '
+                   . 'existe e a condição ficava permanentemente falsa',
+    ],
+    [
+        'nome'    => 'label_when em forma de lista',
+        'entrada' => [['TipoDoc' => 'F', 'label' => 'CPF'], ['TipoDoc' => 'J', 'label' => 'CNPJ']],
+        'origem'  => '{"AND":[{"TipoDoc":"F","label":"CPF"},{"TipoDoc":"J","label":"CNPJ"}]}',
+        'nosso'   => null,   // não passa mais pelo normalizador: ver atributos()
+        'porque'  => 'o plugin `label` espera uma LISTA; virava AND e o rótulo nunca mudava',
+    ],
+];
+
+foreach ($divergencias as $d) {
+    $total++;
+    $daOrigem = $origem->encode($d['entrada']);
+
+    if ($d['nosso'] === null) {
+        // label_when saiu de REGRAS_CONDICAO: o teste é sobre o atributo emitido.
+        $attr = FormRuleCompiler::atributos(['label_when' => $d['entrada']]);
+        $ok = $daOrigem === $d['origem']
+            && strpos($attr, '"label":"CPF"') !== false
+            && strpos($attr, 'AND') === false;
+    } else {
+        $ok = $daOrigem === $d['origem'] && FormRuleCompiler::encode($d['entrada']) === $d['nosso'];
+    }
+
+    if ($ok) {
+        printf("  ok   | %-28s divergência intencional (%s)\n", $d['nome'], $d['porque']);
+    } else {
+        $falhas++;
+        printf(" FALHA | %-28s a divergência esperada não se confirma\n", $d['nome']);
+        printf("         origem  : %s\n         esperado: %s\n", $daOrigem, $d['origem']);
+    }
 }
 
 // A geração do atributo HTML é nova (o trait emite via .phtml), então aqui a

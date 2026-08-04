@@ -25,7 +25,7 @@
   </div>
   <p class="hint">
     É a sintaxe do jQuery Mask Plugin, que é quem faz o trabalho. Nestes exemplos
-    responde o substituto mínimo em <code>assets/jquery-shim.js</code> — cobre
+    responde o substituto mínimo em <code>assets/jquery-shim.js</code>, que cobre
     <code>0 9 A S</code> e literais, o suficiente para demonstrar.
   </p>
 
@@ -41,14 +41,14 @@
     <p>
       <strong>A máscara não valida.</strong> Ela formata enquanto se digita; um CPF
       mascarado pode ser <code>111.111.111-11</code>. E o valor enviado ao servidor vai
-      <em>com</em> os separadores — se o backend espera só dígitos, limpe lá, ou use
+      <em>com</em> os separadores: se o backend espera só dígitos, limpe lá, ou use
       <code>'sanitize' =&gt; 'digits'</code> no <code>fetch_when</code> que consome o
       campo.
     </p>
     <p>
       Note também que <code>mask_when</code> é para máscara <strong>condicional</strong>.
       Uma máscara fixa é atributo do tipo do campo (um <code>type =&gt; 'cep'</code> no
-      gerador de origem), não regra — escrever uma condição sempre verdadeira só para
+      gerador de origem), não regra. Escrever uma condição sempre verdadeira só para
       aplicar máscara é usar a ferramenta errada.
     </p>
   </div>
@@ -69,8 +69,8 @@
     <table>
       <tr><th>Regra</th><th>Params</th><th>Passa quando</th></tr>
       <tr><td><code>idade_minima</code></td><td><code>['min' =&gt; 18]</code></td><td>a data <code>dd/mm/aaaa</code> corresponde a pelo menos <em>min</em> anos</td></tr>
-      <tr><td><code>data_futura</code></td><td>—</td><td>a data não está no futuro</td></tr>
-      <tr><td><code>data_passada</code></td><td>—</td><td>a data não está no passado</td></tr>
+      <tr><td><code>data_futura</code></td><td>nenhum</td><td>a data não está no futuro</td></tr>
+      <tr><td><code>data_passada</code></td><td>nenhum</td><td>a data não está no passado</td></tr>
       <tr><td><code>regex</code></td><td><code>['pattern' =&gt; '…']</code></td><td>o valor casa com o padrão</td></tr>
       <tr><td><code>tamanho_min</code></td><td><code>['min' =&gt; 3]</code></td><td><code>value.length &gt;= min</code></td></tr>
       <tr><td><code>tamanho_max</code></td><td><code>['max' =&gt; 100]</code></td><td><code>value.length &lt;= max</code></td></tr>
@@ -81,7 +81,7 @@
   <p>
     O plugin expõe <code>registerValidator(nome, fn)</code>. A função recebe
     <code>(value, params)</code> e devolve booleano. Nesta página registramos
-    <code>cpf</code> assim — teste com <code>111.111.111-11</code> para ver falhar.
+    <code>cpf</code> assim. Teste com <code>111.111.111-11</code> para ver falhar.
   </p>
   <pre><code>const validate = window.formVisibilityManager.engine.plugins.get('validate');
 validate.registerValidator('cpf', (value) =&gt; digitosValidos(value));</code></pre>
@@ -99,7 +99,7 @@ validate.registerValidator('cpf', (value) =&gt; digitosValidos(value));</code></
 });</code></pre>
   <p>
     <code>validateField()</code> devolve booleano, alterna a classe
-    <code>form-rule-invalid</code>, escreve a mensagem no <code>title</code> do campo —
+    <code>form-rule-invalid</code>, escreve a mensagem no <code>title</code> do campo
     e devolve <code>true</code> com aviso no console se a regra nomeada não estiver
     registrada, para não travar o formulário por causa de um erro de digitação no nome.
   </p>

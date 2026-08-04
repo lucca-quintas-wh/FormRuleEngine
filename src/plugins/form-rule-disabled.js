@@ -23,12 +23,12 @@ window.FormRuleDisabledPlugin = window.FormRuleDisabledPlugin || class FormRuleD
         
         if (isDisabled) {
             input.setAttribute('disabled', 'disabled');
-            input.classList.add('ilu-input--disabled');
-            element.classList.add('ilu-form-field--disabled', 'form-rule-disabled');
+            input.classList.add(...this.temaClasses('inputDisabled'));
+            element.classList.add(...this.temaClasses('fieldDisabled'));
         } else {
             input.removeAttribute('disabled');
-            input.classList.remove('ilu-input--disabled');
-            element.classList.remove('ilu-form-field--disabled', 'form-rule-disabled');
+            input.classList.remove(...this.temaClasses('inputDisabled'));
+            element.classList.remove(...this.temaClasses('fieldDisabled'));
         }
     }
 };

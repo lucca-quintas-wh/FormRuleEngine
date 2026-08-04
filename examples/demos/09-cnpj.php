@@ -3,7 +3,7 @@
  * populate_when: uma resposta, muitos campos.
  *
  * `map` é campo do formulário → caminho na resposta. O caminho aceita ponto
- * ("endereco.cidade"). Chave ausente na resposta é ignorada — o campo fica como
+ * ("endereco.cidade"). Chave ausente na resposta é ignorada: o campo fica como
  * estava, não é limpo.
  *
  * CNPJs que existem no api.php: 11222333000181 e 99888777000166.

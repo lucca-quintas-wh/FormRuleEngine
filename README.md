@@ -4,7 +4,7 @@ Motor declarativo de comportamento de formulário para projetos legados.
 
 Você descreve o formulário **e o comportamento dele** como configuração. Nada de
 escrever JS de formulário à mão para mostrar/esconder campo, tornar obrigatório,
-mascarar, calcular, cascatear combo ou validar no servidor — e, se você usa PHP,
+mascarar, calcular, cascatear combo ou validar no servidor. E, se você usa PHP,
 nada de escrever o HTML dos campos também.
 
 ## Em PHP: configure o array, receba o formulário
@@ -33,13 +33,13 @@ echo FormRenderer::renderForm([
 echo FormRenderer::renderScripts($config);   // carrega só os plugins que a config usa
 ```
 
-Sai o formulário inteiro — seções, grid de 12 colunas, rótulos, controles — com as
+Sai o formulário inteiro (seções, grid de 12 colunas, rótulos, controles) com as
 regras já penduradas no lugar certo. **Zero linha de JavaScript e zero linha de HTML.**
 
 ## Em qualquer outra stack: gere os atributos
 
 O gerador PHP é conveniência. O que a engine realmente consome são atributos HTML,
-então qualquer backend serve — Django, Rails, ASP.NET, JSP ou string concatenada:
+então qualquer backend serve: Django, Rails, ASP.NET, JSP ou string concatenada:
 
 ```html
 <form data-form-visibility="true">
@@ -50,7 +50,7 @@ então qualquer backend serve — Django, Rails, ASP.NET, JSP ou string concaten
     <input name="Cpf" data-mask-when='{"mask":"000.000.000-00"}'>
   </div>
 
-  <!-- a regra vai no WRAPPER, nunca no <input> — ver "Armadilha do wrapper" -->
+  <!-- a regra vai no WRAPPER, nunca no <input>; ver "Armadilha do wrapper" -->
   <div data-visible-when='{"TipoPessoa":"J"}' data-required-when='{"TipoPessoa":"J"}'>
     <label>CNPJ</label>
     <input name="Cnpj">
@@ -74,8 +74,18 @@ O que isso significa na prática, e que ainda **não** está resolvido:
   contra o trait de origem, um cruzado PHP→JS da DSL, e um ponta a ponta que sai
   de uma config, gera o formulário e o exercita no DOM. Cobertura por plugin é o
   item 1 do roadmap.
-- **5 dos 27 plugins ainda dependem do host original** (ver "Fronteira do host").
-- **Mensagens de erro estão em português**, embutidas no código.
+- **Não há build.** Os arquivos são carregados por `<script src>` na ordem
+  documentada; falta empacotar (ESM/UMD/IIFE).
+- **12 plugins usam jQuery.** É a dependência a remover, e a menos urgente: o
+  público-alvo quase sempre já a tem na página.
+
+O que **já** está resolvido, e antes não estava:
+
+- a licença é [MIT](LICENSE), sem restrição de uso;
+- os nomes de classe, o shell do host e os textos são configuráveis
+  (ver "Adaptando ao seu projeto");
+- as arestas de falha silenciosa foram corrigidas, e o que sobrou virou aviso
+  em `diagnose()`.
 
 Veja [ROADMAP.md](ROADMAP.md) para a ordem de trabalho proposta.
 
@@ -85,9 +95,13 @@ Veja [ROADMAP.md](ROADMAP.md) para a ordem de trabalho proposta.
 
 A documentação executável está em [`examples/`](examples/): uma página por
 assunto, todas rodando de verdade no navegador. Nenhum exemplo é HTML escrito à
-mão — cada um é uma **configuração PHP** compilada pelo
-[`FormRuleCompiler`](src/php/FormRuleCompiler.php), e a página mostra as três
-camadas lado a lado: a config, o HTML compilado, e o formulário funcionando.
+mão: cada um é uma **configuração PHP** gerada pelo
+[`FormRenderer`](src/php/FormRenderer.php), e a página mostra as três camadas
+lado a lado: a config, o HTML gerado, e o formulário funcionando.
+
+Por isso as 19 páginas valem como teste de regressão do gerador: qualquer
+mudança em `FormRenderer` que altere a saída aparece ali, em 54 formulários de
+formatos diferentes.
 
 ```bash
 php -S localhost:8000 -t .
@@ -118,7 +132,7 @@ Carregue o núcleo, os plugins que você vai usar, e o bootstrap **por último**
 
 O bootstrap varre o documento atrás de `form[data-form-visibility="true"]`,
 instancia uma engine por formulário e registra **os plugins que encontrar
-carregados** — plugin ausente é ignorado em silêncio, então você paga só pelo que usa.
+carregados**: plugin ausente é ignorado em silêncio, então você paga só pelo que usa.
 
 Inicialização é idempotente (marca `dataset.formVisibilityV2Initialized`), o que
 importa em telas legadas que injetam HTML por AJAX e re-executam scripts inline.
@@ -126,11 +140,11 @@ importa em telas legadas que injetam HTML por AJAX e re-executam scripts inline.
 ### Dependências
 
 - **Nenhuma obrigatória** para 22 dos 27 plugins.
-- **jQuery** — usado por 12 plugins (`fetch`, `copy`, `trigger`, `remote-validate`,
+- **jQuery**: usado por 12 plugins (`fetch`, `copy`, `trigger`, `remote-validate`,
   `mask`, `populate`, `sequence`, `behavior`, `submit-handler`, `dynamic-table`,
   `revert`, `password`) e pelo núcleo. É a dependência a remover primeiro; o uso é raso
   (`$(el)`, `.on`, `$.ajax`).
-- **SweetAlert2** (`window.Swal`) — opcional, já guardado por `typeof`. Sem ele,
+- **SweetAlert2** (`window.Swal`): opcional, já guardado por `typeof`. Sem ele,
   os plugins que confirmam ação simplesmente não mostram o diálogo.
 
 ---
@@ -176,8 +190,8 @@ totalizadores), `repeater-init` (linhas add/remove).
 #### Armadilha do wrapper
 
 Os plugins que **alteram o input** (`required`, `disabled`, `label`, `mask`,
-`validate`, …) resolvem o alvo com `element.querySelector('input, select, textarea')`
-— ou seja, procuram **dentro** do elemento e nunca consideram o próprio elemento.
+`validate`, …) resolvem o alvo com `element.querySelector('input, select, textarea')`:
+ou seja, procuram **dentro** do elemento e nunca consideram o próprio elemento.
 
 ```html
 <!-- NÃO funciona: falha em silêncio, sem erro no console -->
@@ -189,7 +203,7 @@ Os plugins que **alteram o input** (`required`, `disabled`, `label`, `mask`,
 </div>
 ```
 
-`visible` é exceção: age no próprio elemento, então funciona nos dois lugares —
+`visible` é exceção: age no próprio elemento, então funciona nos dois lugares
 o que torna a armadilha pior, porque o primeiro plugin que a pessoa experimenta
 funciona como esperado.
 
@@ -211,18 +225,18 @@ A mesma para **todo** `*_when`:
 ```
 
 Operadores aceitos: `eq`, `!=`, `>`, `<`, `>=`, `<=`, `regex`, e dois que comparam
-**dois campos entre si** — `eq_field` e `neq_field`, onde o operando é o *nome* do
+**dois campos entre si**: `eq_field` e `neq_field`, onde o operando é o *nome* do
 outro campo (`{"Confirmacao": {"eq_field": "Senha"}}`).
 
 Duas armadilhas que valem mais que a tabela:
 
-- **Só a primeira chave do objeto é lida.** `{"A":"1","B":"2"}` avalia apenas `A` —
+- **Só a primeira chave do objeto é lida.** `{"A":"1","B":"2"}` avalia apenas `A`
   não é um AND implícito. Para duas condições, use `AND` explicitamente.
 - **Comparadores numéricos convertem, igualdade não.** `>` e `<` passam por
   `parseFloat`; `=` compara com `===` sobre o valor cru do campo, que é sempre
-  string. `{"Quantidade": 1}` é falso quando o input tem `"1"` — escreva `{"Quantidade": "1"}`.
+  string. `{"Quantidade": 1}` é falso quando o input tem `"1"`, escreva `{"Quantidade": "1"}`.
 
-`form_param_<nome>` referencia um parâmetro do formulário inteiro, não um campo —
+`form_param_<nome>` referencia um parâmetro do formulário inteiro, não um campo
 útil para variar comportamento por contexto (modo de edição, origem da chamada).
 
 ### 3. Comportamento de formulário: `data-behavior-when`
@@ -238,26 +252,91 @@ Tipos: `ajax_submit`, `ajax_mutations`, `token_insert`, `intl_phone`.
 
 ---
 
-## Fronteira do host
+## Adaptando ao seu projeto
 
-O núcleo é limpo. O acoplamento ao CRM de origem está concentrado e é conhecido:
+Três coisas eram, até aqui, o que impedia alguém de usar a engine fora do CRM
+onde ela nasceu: a marcação era opinativa, o envio dependia de funções do host, e
+os textos eram em português. As três agora se configuram, e os padrões continuam
+sendo o comportamento histórico, então nada muda para quem já usa.
 
-| Arquivo | Símbolos externos | Natureza |
-|---|---|---|
-| `plugins/form-rule-behavior.js` | `DrawerService`, `refreshMutationTarget`, `openLinkDiv`, `openLink`, `crm:drawer:*` | **real** — precisa virar adapter |
-| `plugins/form-rule-submit-handler.js` | `sendForm`, `DrawerService` | **real** |
-| `plugins/form-rule-sequence.js` | `Swal`, `select2` | parcial — `Swal` já é opcional |
-| `plugins/form-rule-dynamic-table.js` | `Swal` | opcional, já guardado |
-| `plugins/form-rule-revert.js` | `select2` | parcial |
-| `form-rule-engine.js` | `window.sendForm` | já degrada sozinho (`typeof !== 'function' → return`) |
+### Tema: os nomes de classe
 
-Os outros **23 arquivos** (22 plugins + o bootstrap) **não referenciam nada externo**.
+A engine **aplica** classes (`ilu-input--required`) e **procura** seletores
+(`.ilu-form-label`, `.ilu-form-compact__grid`). Os nomes estavam embutidos em cada
+plugin. Agora vivem num mapa só:
 
-O desenho proposto é um **host adapter**: uma interface com `confirm()`, `toast()`,
-`submit()`, `refresh()`, `closePanel()`. Implementação padrão em vanilla; quem tem
-um shell próprio (drawer, modal, SPA) injeta o seu. Assim os 5 arquivos acima
-deixam de citar símbolo de projeto e o CRM de origem passa a **consumir** o pacote
-em vez de mantê-lo forkado.
+```js
+FormRuleEngine.theme.set({
+  label:         '.form-label',      // onde ela PROCURA o rótulo
+  labelRequired: 'is-required',      // o que ela APLICA nele
+  fieldWrapper:  '.form-group',
+});
+
+FormRuleEngine.theme.preset('neutro');   // larga `ilu-*` e `crm-*`: tudo vira form-rule-*
+FormRuleEngine.theme.todos();            // o mapa inteiro, para inspecionar
+```
+
+Os seletores marcados como PROCURA são contrato com o **seu** markup: se o
+elemento não existir com esse nome, a engine não o encontra. Os aplicados são o
+contrário: ela escreve, o seu CSS decide.
+
+### Host: a fronteira com o shell
+
+Cinco plugins citavam `DrawerService`, `sendForm`, `refreshMutationTarget`,
+`openLink`, `openLinkDiv` e `Swal`. Esses nomes agora aparecem em um lugar só, o
+adaptador padrão, que **delega às globais do host quando elas existem** e cai em
+comportamento vanilla quando não existem.
+
+```js
+FormRuleEngine.host.set({
+  confirm:    opcoes => meuModal.perguntar(opcoes),   // → Promise<boolean>
+  toast:      (tipo, texto) => meuToast(tipo, texto),
+  submit:     config => fetch(config.url, …),         // → Promise
+  refresh:    (config, gatilho, escopo) => …,
+  closePanel: () => meuDrawer.fechar(),
+  openPanel:  config => meuDrawer.abrir(config),
+  navigate:   (rota, query) => …,
+  loadInto:   (alvo, rota, params) => …,
+});
+```
+
+O CRM de origem não precisa fazer nada: o padrão detecta as globais dele. Quem
+não as tem passa a ter confirmação (`window.confirm`), mensagem e envio
+(`fetch`) funcionando.
+
+Consequência prática: `prevent_submit_when` e a validação remota **bloqueiam o
+envio para todo mundo**. Antes, o guarda só era instalado quando existia um
+`window.sendForm`; fora dele as regras eram registradas e ninguém as consultava.
+Agora o núcleo escuta o `submit` nativo, e `engine.validateBeforeSubmit()` é
+público para quem envia por AJAX.
+
+### Idioma
+
+```js
+FormRuleEngine.i18n.locale('en');
+FormRuleEngine.i18n.set({ campoObrigatorio: 'Champ requis' });
+FormRuleEngine.i18n.registrar('es', { … });
+```
+
+Acompanham `pt-BR` (padrão) e `en`. Os identificadores internos do código foram
+renomeados para inglês; a documentação segue em português, o que é decisão de
+público-alvo e não pendência técnica.
+
+### Quando a regra não dispara
+
+As falhas da engine eram silenciosas por natureza: a condição não casa, e não há
+erro. `diagnose()` percorre as regras registradas e acusa o que costuma estar
+errado.
+
+```js
+FormRuleEngine.debug = true;          // antes do bootstrap
+// ou <form data-form-debug="true">
+```
+
+Ele reporta regra pendurada no `<input>` em vez do wrapper, campo citado que não
+existe no formulário, condição com mais de uma chave (o runtime lê só a primeira)
+e JSON inválido no atributo. Do lado do PHP, `FormRuleCompiler::avisos()` devolve
+os problemas encontrados na compilação.
 
 ---
 
@@ -267,10 +346,10 @@ São duas peças, com responsabilidades separadas: o **gerador** emite markup, o
 **interpretador** traduz as regras. Dá para usar o interpretador sozinho, se você
 já tem o seu próprio gerador de formulários e só quer as regras.
 
-### `src/php/FormRenderer.php` — o gerador
+### `src/php/FormRenderer.php`, o gerador
 
 `renderForm($config)` devolve o formulário completo. `renderScripts($config)`
-devolve as `<script>` na ordem obrigatória, **só dos plugins que a config usa** —
+devolve as `<script>` na ordem obrigatória, **só dos plugins que a config usa**
 formulário sem máscara não baixa o plugin de máscara.
 
 A estrutura da config: `sections[] → fields[]`, cada campo com `name`, `label`,
@@ -280,15 +359,15 @@ A estrutura da config: `sections[] → fields[]`, cada campo com `name`, `label`
 dentro da grid) e `group` (propaga a condição para os filhos).
 
 O template do formulário fica separado da lógica em
-[`src/php/templates/form.phtml`](src/php/templates/form.phtml) — trocar a marcação
+[`src/php/templates/form.phtml`](src/php/templates/form.phtml), trocar a marcação
 (outro framework de CSS, outra estrutura de seção) é editar esse arquivo, sem
 tocar em regra nenhuma.
 
 **Por que usar o gerador em vez de montar o HTML:** ele acerta sozinho as duas
-armadilhas documentadas abaixo — põe o atributo de regra no wrapper, e emite
+armadilhas documentadas abaixo: põe o atributo de regra no wrapper, e emite
 `value` explícito em checkbox. As duas falham em silêncio quando feitas à mão.
 
-### `src/php/FormRuleCompiler.php` — o interpretador
+### `src/php/FormRuleCompiler.php`, o interpretador
 
 PHP puro, sem dependência de framework. Traduz config declarativa nos atributos
 que o runtime lê, e principalmente **normaliza a DSL**: aceita as várias formas
@@ -313,27 +392,27 @@ Formas aceitas para uma condição, todas equivalentes a `{"Valor":{">":10}}`:
 ```
 
 Mais: aliases de operador (`=`, `==`, `<>`, `neq` → `eq`/`!=`) e **`AND` implícito**
-para lista sequencial de condições — este último é capacidade só do compilador,
+para lista sequencial de condições: este último é capacidade só do compilador,
 já que o runtime avalia apenas a primeira chave de um objeto.
 
 Duas famílias de regra, tratadas diferente de propósito:
 
 - **condição pura** (`visible_when`, `required_when`, `disabled_when`, `label_when`,
-  `enabled_when`) — passa pelo normalizador;
-- **objeto rico** (`set_value_when`, `fetch_when`, `computed_when`, `lock_when`, …)
-  — vai como está. Normalizar quebraria a estrutura: em
+  `enabled_when`), passa pelo normalizador;
+- **objeto rico** (`set_value_when`, `fetch_when`, `computed_when`, `lock_when`, …):
+  vai como está. Normalizar quebraria a estrutura: em
   `set_value_when => ['values' => [...], 'condition' => [...]]`, `values` viraria
   nome de campo.
 
 #### Armadilha: pertinência com exatamente 2 valores
 
-`['Uf' => ['SP','RJ']]` é **indistinguível** de `['Cliente' => ['!=', '']]` — os dois
+`['Uf' => ['SP','RJ']]` é **indistinguível** de `['Cliente' => ['!=', '']]`, os dois
 são "array de 2 escalares". O compilador resolve a favor do par posicional, então
 o teste de pertinência com 2 valores compila para `{"Uf":{"sp":"RJ"}}`, o runtime
 não conhece o operador `sp`, e a condição fica **permanentemente falsa**.
 
 Com 1 ou 3+ valores funciona. Só 2 quebra, o que a torna pior que um erro
-consistente. `{"Uf":{"in":[...]}}` também não salva — não existe operador `in`
+consistente. `{"Uf":{"in":[...]}}` também não salva, não existe operador `in`
 no runtime. Enquanto isso não muda, escreva:
 
 ```php
@@ -343,25 +422,35 @@ no runtime. Enquanto isso não muda, escreva:
 Está fixado nos testes como comportamento **conhecido**, não desejado, e é o
 primeiro item do roadmap. Varri o CRM de origem: nenhuma tela cai nela hoje.
 
-### `examples/views/form-builder.phtml` — um emissor autônomo
+### `src/php/templates/form.phtml`: a marcação
 
-O interpretador traduz as regras; alguém precisa emitir o markup em volta delas
-(grid, rótulo com `ilu-form-label`, `value` explícito no checkbox, o hidden com a
-config do wizard). Os exemplos trazem um emissor sem framework, curto o bastante
-para ler de ponta a ponta — é a resposta prática para *"como eu gero isso do meu
-backend?"*, e o que faz cada página de [`examples/`](examples/) funcionar.
+O template que o `renderForm()` inclui. Está separado da classe de propósito:
+trocar a marcação (outro framework de CSS, outra estrutura de grid) não deve
+exigir tocar em regra. É o único arquivo do pacote com HTML de formulário.
 
-### `reference/php/` — o resto, verbatim
+### `reference/php/`: o resto, verbatim
 
 Não é pacote e não roda isolado; está aqui para responder *"como eu gero isso do
 meu backend?"* e para permitir `diff` contra a origem.
 
-- `FormRenderer.php` — o trait de onde o interpretador foi extraído. Contém o
+- `FormRenderer.php`: o trait de onde o interpretador foi extraído. Contém o
   render completo (`renderForm`, `emitFormOutput`, `buildFormValidationScript`,
   normalização de seções/campos/botões) e depende de `Controller`, `View`, `SField*`.
-- `form-builder.phtml` — o emissor: `sections[] → fields[] → data-*-when`
-- `form-builder-compact.phtml` / `form-builder-cards.phtml` — variantes de layout
-- `FormFieldFactory.php` — fábrica de campo por `type`
+- `form-builder.phtml`: o emissor de lá, acoplado ao framework: `sections[] → fields[] → data-*-when`
+- `form-builder-compact.phtml` / `form-builder-cards.phtml`, variantes de layout
+- `FormFieldFactory.php`: fábrica de campo por `type`
+
+---
+
+## Licença
+
+[MIT](LICENSE). Use, copie, modifique, redistribua e venda, com ou sem alteração,
+em projeto aberto ou fechado. A única condição é manter o aviso de copyright e o
+texto da licença nas cópias.
+
+Não há garantia de espécie alguma: a engine roda em produção no CRM de origem,
+mas as arestas conhecidas estão listadas na
+[referência](examples/?p=99-referencia) justamente porque você vai encontrá-las.
 
 ---
 
@@ -369,6 +458,6 @@ meu backend?"* e para permitir `diff` contra a origem.
 
 Extraído de um CRM multi-tenant em PHP 8.2, onde substituiu o JS de formulário
 escrito à mão em centenas de telas. As regras foram descobertas a partir de
-comportamento real de produção, não desenhadas no papel — o que explica a
+comportamento real de produção, não desenhadas no papel, o que explica a
 cobertura incomum (senha, wizard, gating sequencial, tabela dinâmica) e também
 as arestas listadas acima.

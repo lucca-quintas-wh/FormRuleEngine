@@ -119,29 +119,22 @@ window.FormRuleSubmitHandlerPlugin = window.FormRuleSubmitHandlerPlugin || class
         const title = this.resolveTemplate(config.title || '', response);
         const text = this.resolveTemplate(config.text || '', response);
 
-        if (config.type === 'swal' && typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: title,
-                text: text,
-                icon: config.icon || 'success',
-                showCancelButton: config.show_cancel !== false,
-                confirmButtonColor: config.confirm_color || '#3085d6',
-                cancelButtonColor: config.cancel_color || '#727473',
-                confirmButtonText: config.confirm_text || 'Confirmar',
-                cancelButtonText: config.cancel_text || 'Cancelar',
-            }).then((result) => {
-                if (result.value) {
-                    this.executeActions(onSuccess, response);
-                } else if (config.on_cancel) {
-                    this.executeActions(config.on_cancel, response);
-                }
-            });
-        } else {
-            // Fallback para confirm nativo
-            if (confirm(text)) {
+        // Quem desenha o diálogo é o host: SweetAlert2 se houver, confirm nativo
+        // se não, ou o que você injetar em FormRuleEngine.host.confirm.
+        window.FormRuleEngine.host.confirm({
+            title: title,
+            text: text,
+            icon: config.icon || 'success',
+            showCancel: config.show_cancel !== false,
+            confirmText: config.confirm_text || window.FormRuleEngine.t('confirmar'),
+            cancelText: config.cancel_text || window.FormRuleEngine.t('cancelar'),
+        }).then(confirmado => {
+            if (confirmado) {
                 this.executeActions(onSuccess, response);
+            } else if (config.on_cancel) {
+                this.executeActions(config.on_cancel, response);
             }
-        }
+        });
     }
 
     executeActions(actions, response) {
@@ -159,9 +152,7 @@ window.FormRuleSubmitHandlerPlugin = window.FormRuleSubmitHandlerPlugin || class
                     break;
 
                 case 'close_drawer':
-                    if (typeof DrawerService !== 'undefined' && DrawerService.closeTop) {
-                        DrawerService.closeTop();
-                    }
+                    window.FormRuleEngine.host.closePanel();
                     break;
 
                 case 'close_dialog':
@@ -181,8 +172,8 @@ window.FormRuleSubmitHandlerPlugin = window.FormRuleSubmitHandlerPlugin || class
                             target: action.target || 'nivel2',
                             size: action.size || 'md',
                         });
-                    } else if (typeof openLinkDiv === 'function') {
-                        openLinkDiv(modalRoute, modalParams, action.target || 'nivel2');
+                    } else {
+                        window.FormRuleEngine.host.loadInto(action.target || 'nivel2', modalRoute, modalParams);
                     }
                     break;
 
@@ -197,8 +188,8 @@ window.FormRuleSubmitHandlerPlugin = window.FormRuleSubmitHandlerPlugin || class
                             fullWidth: action.full_width === true,
                             width: action.width || '',
                         });
-                    } else if (typeof DrawerService !== 'undefined' && DrawerService && typeof DrawerService.open === 'function') {
-                        DrawerService.open({
+                    } else {
+                        window.FormRuleEngine.host.openPanel({
                             title: action.title || '',
                             route: drawerRoute,
                             params: drawerParams,

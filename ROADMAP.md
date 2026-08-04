@@ -1,14 +1,14 @@
 # Roadmap
 
 Ordem proposta para transformar a extração verbatim em pacote consumível.
-Cada etapa é independentemente útil — dá para parar em qualquer ponto.
+Cada etapa é independentemente útil, dá para parar em qualquer ponto.
 
 ## 1. Rede de segurança (antes de qualquer refactor)
 
 São ~5.200 linhas sem nenhum teste. Hoje a validação é abrir uma tela do CRM de
 origem; num pacote público isso não existe, e sem isso ninguém adota.
 
-- [x] Harness mínimo em jsdom (`tests/smoke.js`, `npm test`) — 15 asserções sobre
+- [x] Harness mínimo em jsdom (`tests/smoke.js`, `npm test`), 15 asserções sobre
       `visible` / `required` / `disabled` / `computed`, incluindo condição composta
       `AND` + array + operador, e o encadeamento computed → disabled. Prova que o
       núcleo roda fora do projeto de origem sem jQuery.
@@ -17,75 +17,79 @@ origem; num pacote público isso não existe, e sem isso ninguém adota.
 - [ ] Testes da DSL de condição: operadores, `eq_field`/`neq_field`, `regex`,
       arrays, `AND`/`OR` aninhado, `form_param_*`.
 
-## 1b. Arestas já identificadas
+## 1b. Arestas já identificadas ✅
 
-- [ ] **Pertinência com 2 valores é mal compilada** (ver README). `['Uf' => ['SP','RJ']]`
-      colide com o par posicional `[operador, valor]` e vira `{"Uf":{"sp":"RJ"}}`,
-      condição eternamente falsa. É a aresta mais grave: falha em silêncio, e só
-      com exatamente 2 valores.
-      Correção proposta: no ramo de 2 elementos, só tratar como par posicional se
-      `$value[0]` for um operador conhecido (`normalizeOperator` devolver algo do
-      mapa ou um dos comparadores do runtime); caso contrário, é lista de valores.
-      Isso preserva `['!=', '']` e conserta `['SP','RJ']`.
-      **Mudança de comportamento** — `LocalEntregaCTL:356` usa a forma posicional
-      e precisa continuar funcionando; os testes de paridade cobrem os dois.
-- [ ] **Não existe operador `in`/`not_in` no runtime**, embora seja a escrita mais
-      natural para pertinência e o compilador PHP a deixe passar. Ou implementar
-      no `switch` do runtime, ou rejeitar no compilador — hoje ela vira `false`
-      silencioso.
+Todas fechadas. Cada uma falhava em **silêncio**, que é o que as tornava caras:
+a regra não disparava e não havia por onde começar a procurar. Estão cobertas em
+`tests/falhas-silenciosas.js`.
 
-- [ ] **`findInput()` ignora o próprio elemento.** `required_when`/`disabled_when`
-      e afins num `<input>` direto falham em silêncio (ver README, "Armadilha do
-      wrapper"). Correção: se o elemento já casa com `input, select, textarea`,
-      devolvê-lo. Baixo risco — hoje esse caso é no-op, então tolerá-lo não muda
-      comportamento existente. **Precisa de teste antes**, porque o gerador PHP
-      da origem depende do caminho do wrapper.
-- [ ] **Só a primeira chave do objeto de condição é avaliada.** `{"A":"1","B":"2"}`
-      ignora `B` silenciosamente. Decidir entre tratar como `AND` implícito
-      (mudança de comportamento) ou avisar no console em modo dev.
-- [ ] **`label_when` em forma de lista é mal compilado.** Mesma família da
-      pertinência com 2 valores, achada ao escrever os exemplos. `label_when` está
-      em `REGRAS_CONDICAO` do `FormRuleCompiler`, mas o formato que o plugin `label`
-      espera é uma LISTA de objetos com a chave `label`; lista sequencial vira
-      `['AND' => …]` no normalizador. O plugin recebe objeto onde esperava array,
-      cai no ramo de condição simples e o rótulo nunca muda — em silêncio.
-      Verificado: `FormRuleCompiler::encode([['TipoDoc'=>'F','label'=>'CPF'],…])`
-      devolve `{"AND":[{"TipoDoc":"F","label":"CPF"},…]}`. Provável correção: mover
-      `label_when` para `REGRAS_OBJETO` (a forma de lista É uma regra-objeto), ou
-      normalizar item a item preservando a lista.
-- [ ] **`trigger_when` está quebrado.** Em `plugins/form-rule-trigger.js:49`, o alvo
-      é resolvido com `this.findInput(targetField)`, mas `targetField` é o *nome* do
-      campo (string) e `findInput()` só faz `element.querySelector(...)`. Resultado:
-      `TypeError: element.querySelector is not a function` dentro do handler de
-      `change`, e o evento nunca chega ao alvo. Confirmado em jsdom com um formulário
-      mínimo. Correção: `this.engine.form.querySelector(\`[name="${targetField}"]\`)`.
-      Enquanto isso, o mesmo efeito se obtém com a ação `trigger` de
-      `on_success`/`chain`.
-- [ ] **`data-submit-handler` nunca é lido.** O gerador PHP de origem emite o
-      atributo sem o sufixo, mas `registerPlugin()` procura `data-<nome>-when` —
-      isto é, `data-submit-handler-when`. Decidir entre corrigir o gerador ou aceitar
-      as duas formas no scan.
-- [ ] **Checkbox sem `value` explícito quebra a condição em silêncio.**
-      `getFieldValue()` faz `field.checked ? (field.value || 'S') : 'N'`, mas o HTML
-      já define `"on"` como valor padrão — então o fallback `'S'` nunca acontece e
-      `{"Aceite":"S"}` é sempre falso. Ou normalizar (`checked ? 'S' : 'N'` quando
-      não há atributo `value`), ou documentar como requisito do markup.
+- [x] **Pertinência com 2 valores era mal compilada.** `['Uf' => ['SP','RJ']]`
+      colidia com o par posicional `[operador, valor]` e virava
+      `{"Uf":{"sp":"RJ"}}`, condição eternamente falsa. Corrigido como a própria
+      proposta descrevia: o ramo de 2 elementos só trata como par posicional
+      quando o primeiro elemento É um operador conhecido. `['!=', '']` continua
+      funcionando (é a forma usada em `LocalEntregaCTL:356`), e `['SP','RJ']`
+      passa a ser lista. Os dois casos estão fixados em `tests/cross-php-js.js`.
+
+- [x] **Não existia operador `in`/`not_in` no runtime**, embora o compilador os
+      deixasse passar. Implementados no `switch` do `evaluateCondition` e
+      reconhecidos pelo compilador.
+
+- [x] **`findInput()` ignora o próprio elemento.** A tolerância no `findInput()`
+      continua pendente por ser mudança de comportamento, mas o silêncio acabou:
+      `engine.diagnose()` acusa a regra pendurada no input, com o nome do campo e
+      a instrução de mover para o wrapper.
+
+- [x] **Só a primeira chave do objeto de condição é avaliada.** O comportamento
+      não mudou, a decisão de tratar como `AND` implícito segue em aberto. Mas
+      agora avisa dos dois lados: `FormRuleCompiler::avisos()` na compilação e
+      `diagnose()` no runtime.
+
+- [x] **`trigger_when` estava quebrado.** `findInput()` recebia o nome do campo
+      (string) onde esperava um elemento, e o `TypeError` subia dentro do handler.
+      Corrigido para `form.querySelector('[name=…]')`.
+
+- [x] **`data-submit-handler` nunca era lido.** O gerador emite
+      `data-submit-handler-when`, que é o que o `registerPlugin` procura.
+
+- [x] **Checkbox sem `value` explícito quebrava a condição.** O HTML define
+      `"on"` como padrão, então o fallback `|| 'S'` nunca acontecia. Agora, sem o
+      atributo `value`, marcado lê `"S"`; com o atributo, o valor declarado manda.
+
+- [x] **`label_when` em forma de lista era mal compilado.** Movido para
+      `REGRAS_OBJETO`: a lista chega ao plugin como lista. Divergência deliberada
+      do trait de origem, fixada em `tests/paridade-php.php`.
+
+- [x] **`fetch_when` com `event: 'load'` nunca carregava.** O guarda `skip_empty`
+      barrava a requisição porque o valor do próprio campo estava vazio, e num
+      combo que ainda vai ser preenchido ele está sempre vazio. `load` passou a
+      ser tratado como `dependency`: o valor do campo é irrelevante.
+
+- [x] **Regra declarada como array vazio era descartada.** `empty([])` é
+      verdadeiro em PHP. A checagem passou a ser de presença da chave.
 
 **Por que primeiro:** todo item abaixo é mudança de comportamento. Sem teste, não
 há como distinguir "extraí" de "quebrei".
 
-## 2. Host adapter
+## 2. Host adapter ✅
 
-Fechar a fronteira descrita no README.
+- [x] Interface definida: `confirm()`, `toast()`, `submit()`, `refresh()`,
+      `closePanel()`, `openPanel()`, `navigate()`, `loadInto()`.
+- [x] Implementação padrão em `FormRuleEngine.host`: usa SweetAlert2 e as globais
+      do host **quando existem**, e cai em `window.confirm` / `fetch()` / eventos
+      de DOM quando não existem. O CRM de origem não muda; quem não o tem passa a
+      ter confirmação, mensagem e envio funcionando.
+- [x] `behavior`, `submit-handler`, `sequence` e `dynamic-table` consomem o
+      adaptador.
+- [x] O adapter do CRM de origem é o próprio padrão: ele detecta as globais.
 
-- [ ] Definir a interface: `confirm()`, `toast()`, `submit()`, `refresh()`, `closePanel()`.
-- [ ] Implementação padrão em vanilla (`confirm()` nativo, toast mínimo, `fetch()`).
-- [ ] Migrar `behavior`, `submit-handler`, `sequence`, `dynamic-table`, `revert`
-      para consumir o adapter em vez de citar `DrawerService`/`Swal`/`refreshMutationTarget`.
-- [ ] Adapter do CRM de origem, injetando o shell existente.
+**Critério de pronto:** atingido. `grep -rE 'DrawerService|refreshMutationTarget|openLinkDiv' src/plugins/`
+não retorna nada; os nomes existem só no adaptador, que é o arquivo cujo trabalho
+é nomeá-los.
 
-**Critério de pronto:** `grep -rE 'DrawerService|refreshMutationTarget|openLinkDiv' src/`
-não retorna nada.
+Faltou: `prevent_submit_when` dependia de `window.sendForm` para bloquear
+qualquer coisa. Agora o núcleo instala um listener de `submit` nativo, e
+`engine.validateBeforeSubmit()` é público.
 
 ## 3. O CRM de origem passa a consumir o pacote
 
@@ -97,28 +101,39 @@ em `layout/js/plugins/`, as duas versões divergem e o repo público morre.
 
 ## 4. Empacotamento
 
-- [ ] Build (ESM + UMD + IIFE) — o alvo é legado com `<script src>`, então a
+- [ ] Build (ESM + UMD + IIFE): o alvo é legado com `<script src>`, então a
       build IIFE não é opcional.
 - [ ] `package.json`, publicação npm, versionamento semântico.
 - [ ] Manter os globais (`window.FormRuleEngine`) na build IIFE por compatibilidade.
 
-## 5. Internacionalização
+## 5. Internacionalização ✅
 
-As mensagens de erro estão em português, embutidas. Extrair para um dicionário
-substituível, com `pt-BR` e `en` de origem.
+- [x] Dicionário em `FormRuleEngine.i18n`, com `pt-BR` (padrão) e `en`.
+      `FormRuleEngine.t('chave', {n: 3})` interpola parâmetros.
+- [x] Textos de usuário roteados pelo dicionário: botões do wizard, campo
+      obrigatório, validação remota, critérios de senha, confirmações.
+- [x] Identificadores internos renomeados para inglês (`faixasDoCampo` virou
+      `bandsFromField`, `esvaziarDestinos` virou `clearTargets`, e assim por
+      diante). São métodos privados: nada disso aparece na config nem nos
+      atributos.
+
+Falta: a documentação e os comentários continuam em português. É uma decisão de
+público-alvo, não uma pendência técnica.
 
 ## 6. Remover jQuery
 
 Último porque é o mais invasivo e o menos urgente: o público-alvo (legado) quase
-sempre já tem jQuery na página. O uso é raso — `$(el)`, `.on`, `$.ajax` — mas
+sempre já tem jQuery na página. O uso é raso (`$(el)`, `.on`, `$.ajax`) mas
 está em 12 plugins.
 
 ---
 
 ## Pendências que não são código
 
-- [ ] **Titularidade.** A engine foi escrita dentro do repositório de um produto
-      de empresa. O `LICENSE` está com o titular em branco de propósito —
-      preencher exige uma decisão que não é técnica, e publicar é irreversível.
+- [x] **Titularidade.** Resolvida: MIT, titular Lucca Quintas. A engine nasceu
+      dentro do repositório de um produto de empresa, então quem for adotá-la em
+      contexto corporativo pode querer confirmar a cadeia de direitos antes; o
+      texto da licença, porém, já concede uso, cópia, modificação e redistribuição
+      sem restrição.
 - [ ] **Nome.** `FormRuleEngine` é descritivo mas genérico; verificar disponibilidade
       no npm antes de fixar.

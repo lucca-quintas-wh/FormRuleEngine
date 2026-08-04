@@ -1,7 +1,7 @@
 <?php
 /**
  * Cálculo condicional: fora da condição, o plugin devolve undefined e
- * setFieldValue() nem é chamado — o campo fica como estava.
+ * setFieldValue() nem é chamado: o campo fica como estava.
  */
 
 return [

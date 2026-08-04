@@ -3,7 +3,7 @@
  * copy_when mora no wrapper do campo de DESTINO e aponta a `source`.
  * Enquanto a condição vale, o destino espelha a origem a cada mudança dela.
  *
- * Repare no `checked_value`: o emissor sempre escreve um value explícito no
+ * Repare no `checked_value`: o FormRenderer sempre escreve um value explícito no
  * checkbox. Sem ele o navegador usa "on" e a condição {"...":"S"} nunca casa.
  */
 
@@ -25,7 +25,7 @@ return [
                     'source'    => 'RazaoSocial',
                     'condition' => ['UsarMesmoNome' => 'S'],
                 ],
-                'hint' => 'Digite na razão social e veja o espelho. Desmarque a caixa: o destino volta ao valor <strong>original</strong> — o plugin o guarda na primeira avaliação.',
+                'hint' => 'Digite na razão social e veja o espelho. Desmarque a caixa: o destino volta ao valor <strong>original</strong>: o plugin o guarda na primeira avaliação.',
             ],
         ],
     ]],

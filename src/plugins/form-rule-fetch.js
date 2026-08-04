@@ -7,7 +7,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
     constructor() {
         super('fetch');
         this.debounceTimers = new Map();
-        this.emVoo = new Map();
+        this.inFlight = new Map();
     }
 
     extractDependencies(rules) {
@@ -21,7 +21,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         configs.forEach(rule => {
             // `trigger` explícito manda: a cascata do cotador manda no corpo o valor
             // do PRÓPRIO alvo (a Administradora envia `administradora`), e derivar a
-            // dependência dos tokens faria o campo disparar a busca que o repopula —
+            // dependência dos tokens faria o campo disparar a busca que o repopula
             // laço infinito. Quem declara trigger diz exatamente quem o acorda.
             if (Array.isArray(rule.trigger) && rule.trigger.length) {
                 deps.push(...rule.trigger);
@@ -57,7 +57,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         // Remove handler anterior para evitar duplicação
         $input.off('.fetchwhen');
 
-        // event: 'dependency' — CASCATA. A regra mora no campo de DESTINO (o combo
+        // event: 'dependency', CASCATA. A regra mora no campo de DESTINO (o combo
         // que será populado) e não escuta o próprio change: a engine já reavalia o
         // elemento quando qualquer dependência muda, e é essa reavaliação que
         // executa a busca. É o que substitui os carrega*/seed* soltos na view.
@@ -65,7 +65,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
             const primeiraAvaliacao = element.dataset.fetchDependencyBound !== 'true';
             element.dataset.fetchDependencyBound = 'true';
             // No init a engine avalia todo mundo uma vez; buscar aí encheria os
-            // combos antes de o usuário escolher a origem (e com filtro vazio).
+            // combos antes de o usuário escolher a origem (e com filtro isEmpty).
             if (primeiraAvaliacao && !configs.some(rule => rule.immediate)) return;
             this.executeFetch(input, configs);
             return;
@@ -97,14 +97,18 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
     }
 
     executeFetchRule(input, rules) {
-        const cascata = rules.event === 'dependency';
+        // `dependency` e `load` populam o PRÓPRIO campo: o valor dele é
+        // irrelevante e os guardas de valor isEmpty abaixo não se aplicam. Sem
+        // isto, um combo com `event: "load"` nunca carregava, porque nasce
+        // isEmpty e `skip_empty` (padrão true) abortava a requisição.
+        const cascata = rules.event === 'dependency' || rules.event === 'load';
         let value = input.value || '';
         if (rules.sanitize === 'digits') {
             value = value.replace(/[^0-9]/g, '');
         }
 
-        // Numa cascata o valor do próprio campo é irrelevante — ele é o destino,
-        // não a origem. Os guardas de valor vazio abaixo valem só para o modo
+        // Numa cascata o valor do próprio campo é irrelevante: ele é o destino,
+        // não a origem. Os guardas de valor isEmpty abaixo valem só para o modo
         // clássico (fetch disparado pelo blur/change do próprio campo).
         if (!cascata) {
             // on_empty: run actions and abort AJAX when value is empty
@@ -117,7 +121,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         }
 
         // `require`: nomes de campos que precisam estar preenchidos para a busca
-        // fazer sentido. Faltando algum, o destino é ESVAZIADO — deixar a lista
+        // fazer sentido. Faltando algum, o destino é ESVAZIADO, deixar a lista
         // anterior no ar mostraria opções de um filtro que não vale mais.
         if (Array.isArray(rules.require) && rules.require.length) {
             const faltando = rules.require.some(campo => {
@@ -125,14 +129,14 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
                 return v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length);
             });
             if (faltando) {
-                this.esvaziarDestinos(rules);
+                this.clearTargets(rules);
                 return;
             }
         }
 
         // Verifica condição
         if (rules.condition && !this.evaluateCondition(rules.condition)) {
-            if (cascata) this.esvaziarDestinos(rules);
+            if (cascata) this.clearTargets(rules);
             return;
         }
 
@@ -155,15 +159,15 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         // requisição sairia idêntica duas vezes. Vale a última: a anterior é
         // abortada, senão a resposta atrasada sobrescreve a nova.
         // A engine faz JSON.parse do atributo a cada avaliação, então o objeto
-        // `rules` é novo toda vez — a chave precisa vir do CONTEÚDO da regra.
-        let emVoo = null;
+        // `rules` é novo toda vez, a chave precisa vir do CONTEÚDO da regra.
+        let inFlight = null;
         if (cascata) {
             const chave = JSON.stringify(rules);
             const assinatura = ajaxConfig.type + ' ' + url + ' ' + JSON.stringify(ajaxConfig.data || {});
-            const anterior = this.emVoo.get(chave);
+            const anterior = this.inFlight.get(chave);
             if (anterior && anterior.xhr && anterior.xhr.readyState !== 4) {
                 // Mesma busca já a caminho: não há o que fazer. Sair AQUI, antes
-                // de abrir o token de loading, é o ponto do conserto — a versão
+                // de abrir o token de loading, é o ponto do conserto, a versão
                 // anterior já tinha chamado show() acima e retornava sem hide(),
                 // prendendo o "Carregando" para sempre. Numa cascata este ramo é
                 // rotina, não exceção: repopular a Operadora limpa a Acomodação,
@@ -177,8 +181,8 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
                     anterior.tokenLoading = null;
                 }
             }
-            emVoo = { assinatura, xhr: null, abortada: false, tokenLoading: null };
-            this.emVoo.set(chave, emVoo);
+            inFlight = { assinatura, xhr: null, abortada: false, tokenLoading: null };
+            this.inFlight.set(chave, inFlight);
         }
 
         // Loading só depois de todos os guardas: a partir daqui a requisição
@@ -187,7 +191,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         if (rules.loading && window.LoadingManager) {
             tokenLoading = LoadingManager.show({ label: 'fetch_when ' + url });
         }
-        if (emVoo) emVoo.tokenLoading = tokenLoading;
+        if (inFlight) inFlight.tokenLoading = tokenLoading;
 
         const requisicao = $.ajax(ajaxConfig)
             .done((response) => {
@@ -204,7 +208,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
             .fail(() => {
                 // Aborto nosso (chegou gatilho mais novo) não é falha do servidor:
                 // limpar o destino aqui apagaria o resultado da busca que o substituiu.
-                if (emVoo && emVoo.abortada) return;
+                if (inFlight && inFlight.abortada) return;
                 if (rules.clear_on_fail) {
                     (Array.isArray(rules.clear_on_fail) ? rules.clear_on_fail : [rules.clear_on_fail])
                         .forEach(fieldName => this.engine.clearField(fieldName));
@@ -220,19 +224,19 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
                 if (tokenLoading != null && window.LoadingManager) {
                     LoadingManager.hide(tokenLoading);
                 }
-                if (emVoo && emVoo.tokenLoading === tokenLoading) {
-                    emVoo.tokenLoading = null;
+                if (inFlight && inFlight.tokenLoading === tokenLoading) {
+                    inFlight.tokenLoading = null;
                 }
             });
 
-        if (emVoo) emVoo.xhr = requisicao;
+        if (inFlight) inFlight.xhr = requisicao;
     }
 
     /**
      * Esvazia os combos de destino de uma cascata, deixando só o placeholder.
      * Chamado quando um `require` não está satisfeito ou a `condition` reprova.
      */
-    esvaziarDestinos(rules) {
+    clearTargets(rules) {
         const lista = Array.isArray(rules.map_options)
             ? rules.map_options
             : (rules.map_options ? [rules.map_options] : []);
@@ -246,7 +250,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
                 config.include_empty !== false,
                 false
             );
-            this.notificarDestino(config);
+            this.notifyTarget(config);
         });
     }
 
@@ -254,10 +258,10 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
      * Avisa quem depende do destino que ele mudou. Sem isso, repopular um combo
      * é invisível para as outras regras: a liberação sequencial continuaria lendo
      * "preenchido" um campo que acabou de ser esvaziado, e a cascata seguinte
-     * nunca dispararia. Só com `notify: true` — sem ele o comportamento é o
+     * nunca dispararia. Só com `notify: true`, sem ele o comportamento é o
      * histórico (quem quiser encadeia por on_success/trigger).
      */
-    notificarDestino(config) {
+    notifyTarget(config) {
         if (!config || config.notify !== true || !config.field) return;
         const alvo = this.engine.form.querySelector(
             `[name="${config.field}"], [name="${config.field}[]"]`
@@ -303,16 +307,16 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
                 config.include_empty !== false,
                 config.select_first === true
             );
-            this.anexarOpcoes(config);
-            this.notificarDestino(config);
+            this.appendFixedOptions(config);
+            this.notifyTarget(config);
         });
     }
 
     /**
-     * Opções fixas acrescentadas depois das que vieram do servidor — é a
+     * Opções fixas acrescentadas depois das que vieram do servidor, é a
      * "Nenhuma" que o cotador põe no fim da lista de administradoras.
      */
-    anexarOpcoes(config) {
+    appendFixedOptions(config) {
         const fixas = []
             .concat((config.prepend || []).map(item => ({ item, inicio: true })))
             .concat((config.append || []).map(item => ({ item, inicio: false })));
@@ -321,7 +325,7 @@ window.FormRuleFetchPlugin = window.FormRuleFetchPlugin || class FormRuleFetchPl
         const alvo = this.engine.form.querySelector(`[name="${config.field}"]`);
         if (!alvo || alvo.tagName !== 'SELECT') return;
 
-        // Quantas opções REAIS vieram do servidor (fora o placeholder vazio):
+        // Quantas opções REAIS vieram do servidor (fora o placeholder isEmpty):
         // é o que decide um ".:Todos:." que só faz sentido com mais de uma.
         const reais = Array.from(alvo.options).filter(o => o.value !== '').length;
 

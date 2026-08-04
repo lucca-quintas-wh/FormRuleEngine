@@ -2,7 +2,7 @@
 /**
  * Visibilidade: o caso básico.
  *
- * `type => 'group'` propaga a condição para cada campo filho — é o que o
+ * `type => 'group'` propaga a condição para cada campo filho. É o que o
  * gerador do projeto de origem faz. Não existe "wrapper de grupo" no HTML
  * final: cada campo sai com o seu próprio `data-visible-when`.
  */

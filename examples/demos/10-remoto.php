@@ -5,7 +5,7 @@
  * engine.hasRemoteValidationErrors() devolve true.
  *
  * Campo reprovado ganha a classe form-rule-invalid e a mensagem no title.
- * O registro é feito por NOME — use a chave `name` quando quiser um
+ * O registro é feito por NOME. Use a chave `name` quando quiser um
  * identificador diferente do nome do campo.
  *
  * E-mails já cadastrados no api.php: joao@, maria@, admin@exemplo.com.

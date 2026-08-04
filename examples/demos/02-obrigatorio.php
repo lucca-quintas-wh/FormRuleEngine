@@ -2,7 +2,7 @@
 /**
  * Obrigatoriedade condicional.
  *
- * O rótulo sai com a classe `ilu-form-label` — é por ela que o plugin
+ * O rótulo sai com a classe `ilu-form-label`. É por ela que o plugin
  * `required` encontra o label para pendurar o asterisco.
  */
 

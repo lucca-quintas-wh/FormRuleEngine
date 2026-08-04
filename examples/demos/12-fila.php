@@ -2,7 +2,7 @@
 /**
  * Liberação sequencial.
  *
- * A ordem vem de `sequence`, que o emissor põe no CONTROLE (não no wrapper) —
+ * A ordem vem de `sequence`, que o FormRenderer põe no CONTROLE (não no wrapper)
  * é ele que o plugin varre e cujo `value` ele lê. A configuração da fila vai
  * num hidden com data-sequence-config.
  *
@@ -51,7 +51,7 @@ return [
                 'sequence' => 4,
                 'sequence_when' => ['TipoPlanoSeq' => '1'],
                 'placeholder' => 'só no coletivo',
-                'hint' => 'Escolha "Individual" no passo 3: este passo é <strong>pulado</strong> — fica visível e travado, mas não bloqueia o 5.',
+                'hint' => 'Escolha "Individual" no passo 3: este passo é <strong>pulado</strong>: fica visível e travado, mas não bloqueia o 5.',
             ],
             [
                 'name' => 'NascimentoSeq', 'label' => '5 · Nascimento do titular', 'type' => 'text', 'col' => 4,

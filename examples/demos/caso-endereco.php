@@ -1,12 +1,12 @@
 <?php
 /**
- * Endereço e dados da empresa — as regras que falam com o servidor.
+ * Endereço e dados da empresa, as regras que falam com o servidor.
  *
  *   fetch_when            busca por CEP e cascata de combos em três níveis
  *   populate_when         uma resposta preenchendo meio formulário
  *   remote_validate_when  checagem assíncrona que trava o envio
  *
- * Todas conversam com `api.php` de verdade — nada de mock em memória aqui.
+ * Todas conversam com `api.php` de verdade, nada de mock em memória aqui.
  * Abra o painel de rede do navegador enquanto mexe nos campos.
  */
 
@@ -77,7 +77,7 @@ return [
                         'event'  => 'load',
                         // Sem isto a busca é abortada: o guarda `skip_empty`
                         // (padrão true) barra a requisição porque o VALOR do
-                        // próprio campo está vazio — e num combo que ainda vai
+                        // próprio campo está vazio, e num combo que ainda vai
                         // ser preenchido ele está sempre vazio.
                         'skip_empty' => false,
                         'method' => 'GET',
@@ -93,7 +93,7 @@ return [
                 ],
 
                 /* Nível 1. `trigger` diz explicitamente quem acorda esta regra.
-                   Sem ele, as dependências sairiam dos tokens do corpo — e como
+                   Sem ele, as dependências sairiam dos tokens do corpo, e como
                    o corpo cita o próprio destino em cascatas mais complexas,
                    isso viraria laço infinito. `require` impede a busca sem o
                    filtro e ESVAZIA o destino, para não sobrar lista velha. */
@@ -115,13 +115,13 @@ return [
                             'field'  => 'CidadeCascata',
                             'path'   => 'data',
                             // `notify` faz o destino emitir change ao ser
-                            // repopulado — é o que acorda o nível seguinte.
+                            // repopulado. É o que acorda o nível seguinte.
                             'notify' => true,
                         ],
                     ],
                 ],
 
-                /* Nível 2 — só existe porque o nível 1 avisou. */
+                /* Nível 2, só existe porque o nível 1 avisou. */
                 [
                     'name'  => 'BairroCascata',
                     'label' => 'Bairro',
@@ -163,7 +163,7 @@ return [
 
                     /* populate_when é o irmão do fetch_when para o caso "uma
                        resposta, muitos campos". A diferença prática: ele não
-                       tem map_options nem cascata — só `map` e `chain`. */
+                       tem map_options nem cascata, só `map` e `chain`. */
                     'populate_when' => [
                         'event'  => 'blur',
                         'method' => 'POST',
