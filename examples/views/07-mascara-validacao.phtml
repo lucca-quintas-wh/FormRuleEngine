@@ -1,0 +1,142 @@
+<?php fre_pagina_inicio('07-mascara-validacao'); ?>
+
+  <h1><code>mask_when</code> · <code>validate_when</code></h1>
+  <p class="lead">
+    Máscara que troca junto com o tipo do documento, e validação client-side declarada
+    por regra nomeada. Os dois usam o formato "lista de regras": a primeira que casar
+    vence, e nenhuma casando significa <em>remover</em> o efeito.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery + jquery.mask</strong> (máscara) · validate não precisa</span>
+
+  <h2>1. Máscara condicional</h2>
+
+  <?= fre_demo('07-mascara', ['aberto' => true]) ?>
+
+  <h3>Sintaxe do padrão</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Símbolo</th><th>Aceita</th></tr>
+      <tr><td><code>0</code></td><td>dígito obrigatório</td></tr>
+      <tr><td><code>9</code></td><td>dígito opcional</td></tr>
+      <tr><td><code>A</code></td><td>letra ou dígito</td></tr>
+      <tr><td><code>S</code></td><td>letra</td></tr>
+      <tr><td>qualquer outro</td><td>literal, inserido automaticamente</td></tr>
+    </table>
+  </div>
+  <p class="hint">
+    É a sintaxe do jQuery Mask Plugin, que é quem faz o trabalho. Nestes exemplos
+    responde o substituto mínimo em <code>assets/jquery-shim.js</code> — cobre
+    <code>0 9 A S</code> e literais, o suficiente para demonstrar.
+  </p>
+
+  <h3>Formatos aceitos em <code>mask</code></h3>
+  <pre><code>'mask' =&gt; '000.000.000-00'                                  // o padrão direto
+'mask' =&gt; ['pattern' =&gt; '00/00/0000', 'options' =&gt; [...]]   // repassa options ao plugin</code></pre>
+
+  <h2>2. Máscara que some</h2>
+
+  <?= fre_demo('07-mascara-some') ?>
+
+  <div class="warn">
+    <p>
+      <strong>A máscara não valida.</strong> Ela formata enquanto se digita; um CPF
+      mascarado pode ser <code>111.111.111-11</code>. E o valor enviado ao servidor vai
+      <em>com</em> os separadores — se o backend espera só dígitos, limpe lá, ou use
+      <code>'sanitize' =&gt; 'digits'</code> no <code>fetch_when</code> que consome o
+      campo.
+    </p>
+    <p>
+      Note também que <code>mask_when</code> é para máscara <strong>condicional</strong>.
+      Uma máscara fixa é atributo do tipo do campo (um <code>type =&gt; 'cep'</code> no
+      gerador de origem), não regra — escrever uma condição sempre verdadeira só para
+      aplicar máscara é usar a ferramenta errada.
+    </p>
+  </div>
+
+  <h2>3. Validação declarativa</h2>
+  <p>
+    <code>validate_when</code> não valida na hora: ele <strong>marca</strong> o input
+    com a regra que deve valer, gravando <code>data-validate-rule</code>,
+    <code>data-validate-params</code> e <code>data-validate-message</code>, mais a
+    classe <code>form-rule-validated</code>. Quem executa é o seu validador de
+    formulário.
+  </p>
+
+  <?= fre_demo('07-validacao') ?>
+
+  <h3>Validadores embutidos</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Regra</th><th>Params</th><th>Passa quando</th></tr>
+      <tr><td><code>idade_minima</code></td><td><code>['min' =&gt; 18]</code></td><td>a data <code>dd/mm/aaaa</code> corresponde a pelo menos <em>min</em> anos</td></tr>
+      <tr><td><code>data_futura</code></td><td>—</td><td>a data não está no futuro</td></tr>
+      <tr><td><code>data_passada</code></td><td>—</td><td>a data não está no passado</td></tr>
+      <tr><td><code>regex</code></td><td><code>['pattern' =&gt; '…']</code></td><td>o valor casa com o padrão</td></tr>
+      <tr><td><code>tamanho_min</code></td><td><code>['min' =&gt; 3]</code></td><td><code>value.length &gt;= min</code></td></tr>
+      <tr><td><code>tamanho_max</code></td><td><code>['max' =&gt; 100]</code></td><td><code>value.length &lt;= max</code></td></tr>
+    </table>
+  </div>
+
+  <h3>Registrar o seu</h3>
+  <p>
+    O plugin expõe <code>registerValidator(nome, fn)</code>. A função recebe
+    <code>(value, params)</code> e devolve booleano. Nesta página registramos
+    <code>cpf</code> assim — teste com <code>111.111.111-11</code> para ver falhar.
+  </p>
+  <pre><code>const validate = window.formVisibilityManager.engine.plugins.get('validate');
+validate.registerValidator('cpf', (value) =&gt; digitosValidos(value));</code></pre>
+
+  <h3>Como conectar ao seu submit</h3>
+  <p>
+    O plugin foi escrito para ser chamado por um <code>validate()</code> global já
+    existente. Em código novo, o gancho é este:
+  </p>
+  <pre><code>form.addEventListener('submit', (e) =&gt; {
+  const plugin = engine.plugins.get('validate');
+  const campos = form.querySelectorAll('.form-rule-validated');
+  const ok = Array.from(campos).every(el =&gt; plugin.validateField(el));
+  if (!ok) e.preventDefault();
+});</code></pre>
+  <p>
+    <code>validateField()</code> devolve booleano, alterna a classe
+    <code>form-rule-invalid</code>, escreve a mensagem no <code>title</code> do campo —
+    e devolve <code>true</code> com aviso no console se a regra nomeada não estiver
+    registrada, para não travar o formulário por causa de um erro de digitação no nome.
+  </p>
+
+<?php fre_pagina_fim(['form_estado' => 'formValidacao', 'script' => <<<'JS'
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var engine = window.__formRuleEnginesByName['formValidacao'];
+  var plugin = engine.plugins.get('validate');
+
+  plugin.registerValidator('cpf', function (value) {
+    var d = String(value).replace(/\D/g, '');
+    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    var soma = 0, resto, i;
+    for (i = 1; i <= 9; i++) soma += parseInt(d[i - 1]) * (11 - i);
+    resto = (soma * 10) % 11; if (resto >= 10) resto = 0;
+    if (resto !== parseInt(d[9])) return false;
+    soma = 0;
+    for (i = 1; i <= 10; i++) soma += parseInt(d[i - 1]) * (12 - i);
+    resto = (soma * 10) % 11; if (resto >= 10) resto = 0;
+    return resto === parseInt(d[10]);
+  });
+
+  document.getElementById('btnValidar').addEventListener('click', function () {
+    var campos = engine.form.querySelectorAll('.form-rule-validated');
+    if (!campos.length) { Demo.toast('Nenhum campo marcado para validação.', 'warning'); return; }
+    var falhas = [];
+    campos.forEach(function (el) {
+      if (!plugin.validateField(el)) {
+        falhas.push(el.name + ': ' + (el.dataset.validateMessage || 'inválido'));
+      }
+    });
+    if (falhas.length) Demo.toast(falhas.join(' · '), 'error');
+    else Demo.toast('Todos os ' + campos.length + ' campos marcados passaram.', 'info');
+    Demo.log('validou ' + campos.length + ' campo(s), ' + falhas.length + ' falha(s)');
+  });
+});
+</script>
+JS
+]); ?>

@@ -1,0 +1,44 @@
+<?php fre_pagina_inicio('basico'); ?>
+
+  <h1>Começo rápido</h1>
+  <p class="lead">
+    Este formulário não tem <strong>nenhum JavaScript próprio</strong> e não depende de
+    jQuery. Todo o comportamento está nos atributos <code>data-*-when</code>, gerados a
+    partir de um array PHP. Abra o inspetor e mexa nos campos.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <?= fre_demo('basico', ['aberto' => true]) ?>
+
+  <h2>O que aconteceu</h2>
+  <p>
+    A configuração acima passou pelo <code>FormRuleCompiler</code>, que traduziu cada
+    <code>*_when</code> para um atributo, e o HTML resultante foi para a página junto
+    com quatro plugins — <code>visible</code>, <code>required</code>,
+    <code>disabled</code> e <code>computed</code> — mais o núcleo e o bootstrap. Nada
+    além disso.
+  </p>
+
+  <pre><code>&lt;script src="../src/form-rule-engine.js"&gt;&lt;/script&gt;
+&lt;script src="../src/plugins/form-rule-base.js"&gt;&lt;/script&gt;
+&lt;script src="../src/plugins/form-rule-visible.js"&gt;&lt;/script&gt;
+&lt;script src="../src/plugins/form-rule-required.js"&gt;&lt;/script&gt;
+&lt;script src="../src/plugins/form-rule-disabled.js"&gt;&lt;/script&gt;
+&lt;script src="../src/plugins/form-rule-computed.js"&gt;&lt;/script&gt;
+&lt;script src="../src/form-visibility-v2.js"&gt;&lt;/script&gt;   &lt;!-- por último --&gt;</code></pre>
+
+  <p>
+    A lista de plugins não foi escrita à mão: sai de
+    <code>fre_plugins_usados($config)</code>, que varre a configuração e devolve só o
+    que ela exige. Um formulário sem cálculo não baixa o plugin de cálculo.
+  </p>
+
+  <h2>Para onde ir agora</h2>
+  <ul>
+    <li><a href="?p=01-visibilidade">01 · Visibilidade</a> — o plugin mais usado, em detalhe.</li>
+    <li><a href="?p=03-dsl-condicoes">03 · A DSL</a> — a gramática que vale para todas as regras.</li>
+    <li><a href="?p=99-referencia">99 · Referência</a> — tudo em uma página, para consulta.</li>
+    <li><a href="?p=17-casos-completos">17 · Casos completos</a> — formulários inteiros, do jeito que sairiam de um controller.</li>
+  </ul>
+
+<?php fre_pagina_fim(['form_estado' => 'formBasico']); ?>

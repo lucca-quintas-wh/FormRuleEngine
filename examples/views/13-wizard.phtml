@@ -1,0 +1,114 @@
+<?php fre_pagina_inicio('13-wizard'); ?>
+
+  <h1><code>data-step</code></h1>
+  <p class="lead">
+    Cada seção vira uma etapa. O plugin desenha o stepper, a barra de progresso e a
+    navegação, valida os campos obrigatórios da etapa antes de avançar, e pula etapas
+    que não se aplicam.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <div class="note">
+    <p>
+      O plugin <code>step</code> não é uma regra <code>*_when</code>: ele não tem
+      condição própria. A ligação com a DSL é indireta e elegante — uma etapa cuja
+      seção foi escondida por <code>visible_when</code> deixa de existir na navegação,
+      porque o plugin escuta o evento <code>visibility:changed</code>.
+    </p>
+  </div>
+
+  <h2>1. O wizard</h2>
+
+  <?= fre_demo('13-wizard', ['aberto' => true]) ?>
+
+  <h2>2. Configuração</h2>
+  <p>
+    Duas entradas, e as duas são lidas do <strong><code>value</code></strong> de um
+    campo oculto — não do atributo. É o inverso do <code>sequence</code>. Confundir os
+    dois é o erro mais comum ao montar o wizard na mão; gerando do servidor, o emissor
+    resolve.
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
+      <tr><td><code>steps</code></td><td>—</td><td>Lista de <code>['label' =&gt; …, 'icon' =&gt; …]</code> (ou só strings). Define os rótulos do stepper.</td></tr>
+      <tr><td><code>show_stepper</code></td><td><code>true</code></td><td>Desenha a trilha de etapas clicável.</td></tr>
+      <tr><td><code>show_nav</code></td><td><code>true</code></td><td>Desenha a barra Anterior / Próximo / Salvar.</td></tr>
+      <tr><td><code>show_submit</code></td><td><code>true</code></td><td>Mostra o botão final na última etapa visível.</td></tr>
+      <tr><td><code>submit_label</code></td><td><code>Salvar</code></td><td>Texto do botão final.</td></tr>
+      <tr><td><code>submit_onclick</code></td><td>—</td><td>Código a executar no lugar do submit padrão.</td></tr>
+      <tr><td><code>auto_advance</code></td><td><code>false</code></td><td>Avança sozinho ao preencher um campo da etapa atual.</td></tr>
+      <tr><td><code>nav_target</code></td><td>—</td><td>Seletor CSS de onde pendurar a navegação (ex.: o rodapé de um drawer).</td></tr>
+      <tr><td><code>skip</code></td><td><code>[]</code></td><td>Regras de pulo — vão para <code>data-step-rules</code>.</td></tr>
+    </table>
+  </div>
+
+  <h3>Pulos</h3>
+  <pre><code>'skip' =&gt; [
+    ['step' =&gt; 3, 'when' =&gt; ['TipoConta' =&gt; ['pessoal']]],
+]</code></pre>
+  <p>
+    Formato próprio, mais simples que a DSL: <code>when</code> é um mapa <em>campo →
+    lista de valores</em>, e a etapa é pulada quando o valor atual está na lista. Não
+    aceita <code>AND</code>/<code>OR</code> nem operadores. Para lógica mais rica,
+    esconda a seção com <code>visible_when</code>.
+  </p>
+
+  <h2>3. Validação por etapa</h2>
+  <p>
+    Ao clicar em "Próximo" (ou ao pular direto para uma etapa adiante pelo stepper), o
+    plugin valida a etapa atual. São considerados obrigatórios os campos com o atributo
+    <code>[required]</code> <strong>ou</strong> com a classe <code>.required</code> — a
+    segunda existe porque componentes de busca do projeto de origem marcam a classe,
+    não o atributo.
+  </p>
+  <ul>
+    <li>Campo invisível (<code>offsetParent === null</code>) é ignorado.</li>
+    <li>O primeiro campo com erro recebe foco.</li>
+    <li>O wrapper ganha <code>form-step-field-error</code> e uma <code>.form-step-error-msg</code> abaixo.</li>
+  </ul>
+
+  <h2>4. Trazer a sua própria navegação</h2>
+  <p>
+    Se a página já tem botões de navegação — o rodapé de um drawer, por exemplo — o
+    plugin os <strong>adota</strong> em vez de criar a barra dele. Na config, é a
+    chave <code>step_role</code> do botão:
+  </p>
+  <pre><code>'buttons' =&gt; [
+    ['label' =&gt; 'Anterior', 'step_role' =&gt; 'prev'],
+    ['label' =&gt; 'Próximo',  'step_role' =&gt; 'next'],
+    ['label' =&gt; 'Salvar',   'step_role' =&gt; 'submit', 'class' =&gt; 'primary'],
+]</code></pre>
+  <p>
+    O emissor acrescenta <code>data-step-for</code> com o nome do formulário, para dois
+    wizards na mesma página não embaralharem a navegação.
+  </p>
+
+  <h3>Controles que só existem em certas etapas</h3>
+  <p>
+    <code>data-step-only="2"</code> (aceita lista: <code>"2,3"</code>) esconde e mostra
+    qualquer elemento conforme a etapa atual — inclusive elementos
+    <strong>fora</strong> do formulário, como os dois marcadores logo abaixo do wizard
+    acima. Nasceu de um botão de importação por IA que só faz sentido na etapa de dados
+    pessoais.
+  </p>
+
+  <h2>5. Eventos</h2>
+  <p>
+    O formulário emite <code>step:change</code> com <code>detail.step</code> a cada
+    mudança de etapa — é por onde se integra um analytics ou um resumo lateral. O
+    painel de eventos no fim da página está escutando.
+  </p>
+
+  <div class="warn">
+    <p>
+      <strong>Interação com <code>visible_when</code>.</strong> Esconder a seção de uma
+      etapa a remove da navegação — inclusive da contagem "2 de 4". Mas o plugin lê a
+      visibilidade pela classe <code>form-rule-hidden</code>, que só o plugin
+      <code>visible</code> aplica. Esconder a seção por CSS próprio ou por
+      <code>style="display:none"</code> escrito à mão <em>não</em> tem o mesmo efeito.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formWizard']); ?>

@@ -224,7 +224,45 @@
 
   $.fn = Collection.prototype;
 
-  /* ── $.ajax sobre o servidor falso (assets/mock-server.js) ─────────────── */
+  /* ── $.ajax sobre fetch() ───────────────────────────────────────────────
+     Todo AJAX destes exemplos vai para `examples/api.php` de verdade — não há
+     mock. É o que torna as demonstrações de fetch_when / populate_when /
+     remote_validate_when honestas: se o contrato com o servidor estiver
+     errado, elas quebram aqui também.                                      */
+
+  function ajaxViaRede(config) {
+    var metodo = String(config.type || 'GET').toUpperCase();
+    var url = String(config.url || '');
+    var corpo = null;
+
+    var dados = config.data;
+    var query = null;
+    if (dados) {
+      query = typeof dados === 'string' ? dados : new URLSearchParams(dados).toString();
+    }
+
+    if (metodo === 'GET' || metodo === 'HEAD') {
+      if (query) url += (url.indexOf('?') === -1 ? '?' : '&') + query;
+    } else {
+      corpo = query || '';
+    }
+
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+
+    var promessa = fetch(url, {
+      method: metodo,
+      headers: corpo === null ? {} : { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: corpo,
+      signal: controller ? controller.signal : undefined
+    }).then(function (resposta) {
+      if (!resposta.ok) throw { status: resposta.status };
+      return config.dataType === 'json' || config.dataType === undefined
+        ? resposta.json()
+        : resposta.text();
+    });
+
+    return { promessa: promessa, controller: controller };
+  }
 
   $.ajax = function (config) {
     var deferred = {
@@ -233,15 +271,25 @@
       done: function (fn) { this._done.push(fn); return this; },
       fail: function (fn) { this._fail.push(fn); return this; },
       always: function (fn) { this._always.push(fn); return this; },
-      abort: function () { this._aborted = true; this.readyState = 4; }
+      abort: function () {
+        this._aborted = true;
+        this.readyState = 4;
+        if (this._controller) this._controller.abort();
+      }
     };
 
-    var server = window.DemoServer;
-    var run = server
-      ? server.handle(config)
-      : Promise.reject(new Error('DemoServer não carregado'));
+    // Além de done/fail/always, o jQuery aceita os callbacks no próprio config.
+    // O plugin `password` usa `success`/`error`, e o `behavior` usa `beforeSend` —
+    // sem isto a promessa da política de senha nunca resolveria.
+    if (typeof config.beforeSend === 'function') config.beforeSend(deferred);
+    if (typeof config.success === 'function')  deferred._done.push(config.success);
+    if (typeof config.error === 'function')    deferred._fail.push(config.error);
+    if (typeof config.complete === 'function') deferred._always.push(config.complete);
 
-    run.then(function (data) {
+    var rede = ajaxViaRede(config);
+    deferred._controller = rede.controller;
+
+    rede.promessa.then(function (data) {
       deferred.readyState = 4;
       if (deferred._aborted) return;
       deferred._done.forEach(function (fn) { fn(data); });

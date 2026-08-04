@@ -1,0 +1,135 @@
+<?php fre_pagina_inicio('10-validacao-remota'); ?>
+
+  <h1><code>remote_validate_when</code> · <code>prevent_submit_when</code> · <code>confirm_submit</code></h1>
+  <p class="lead">
+    As três regras que se metem entre o usuário e o botão de enviar: checagem no
+    servidor, bloqueio por campo vazio em determinado contexto, e confirmação.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery</strong> (validação remota) · backend real em <code>examples/api.php</code></span>
+
+  <div class="warn">
+    <p>
+      <strong>Leia antes de testar.</strong> O bloqueio de envio embutido no núcleo só
+      se instala quando existe uma função global <code>sendForm</code> — a do CRM de
+      origem. Sem ela, <code>prevent_submit_when</code> registra as regras e ninguém as
+      consulta, e a validação remota marca o campo mas não trava nada.
+    </p>
+    <p>
+      Em código novo, o gancho é chamar as duas verificações no seu handler de submit.
+      É o que esta página faz, e o código está na seção 4.
+    </p>
+  </div>
+
+  <h2>1. Validação remota</h2>
+
+  <?= fre_demo('10-remoto', ['aberto' => true]) ?>
+
+  <p>
+    O runtime aceita como válido: <code>true</code>, <code>"S"</code>, <code>1</code> —
+    e também a <em>string</em> <code>"0"</code>, porque rotas legadas usavam 0 para
+    "sem erro". Vale conferir o seu contrato antes de confiar no padrão.
+  </p>
+
+  <div class="tip">
+    <p>
+      <strong>Limpeza automática.</strong> <code>hasRemoteValidationErrors()</code>
+      descarta, antes de responder, as validações de campos que sumiram do DOM ou
+      ficaram invisíveis. Assim um erro registrado num ramo que o usuário abandonou não
+      trava o envio para sempre.
+    </p>
+  </div>
+
+  <h3>Validação encadeada</h3>
+  <p>
+    <code>then_if_invalid</code> faz uma segunda consulta quando a primeira reprova — o
+    caso real é "o documento já existe: está ativo ou pode ser reaproveitado?". A
+    segunda resposta é que decide, e ela tem <code>on_success</code> /
+    <code>on_fail</code> próprios.
+  </p>
+  <pre><code>'remote_validate_when' =&gt; [
+    'event' =&gt; 'blur', 'url' =&gt; 'api.php?acao=existe-cliente',
+    'data'  =&gt; ['value' =&gt; '{value}'],
+    'then_if_invalid' =&gt; [
+        'url' =&gt; 'api.php?acao=cliente-reaproveitavel',
+        'on_success' =&gt; [
+            ['set_value'    =&gt; ['ModoEdicao' =&gt; 'S']],
+            ['show_message' =&gt; ['type' =&gt; 'info', 'message' =&gt; 'Cliente existente carregado.']],
+        ],
+        'on_fail' =&gt; [
+            ['show_message' =&gt; ['type' =&gt; 'error', 'message' =&gt; 'Cliente já cadastrado e ativo.']],
+        ],
+    ],
+]</code></pre>
+
+  <h2>2. Bloquear o envio</h2>
+
+  <?= fre_demo('10-prevent') ?>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Descrição</th></tr>
+      <tr><td><code>condition</code></td><td>Quando a regra vale.</td></tr>
+      <tr><td><code>fields</code></td><td>Lista de campos que precisam estar preenchidos.</td></tr>
+      <tr><td><code>target</code></td><td>Alternativa a <code>fields</code> para um campo só.</td></tr>
+      <tr><td><code>message</code></td><td>Mensagem mostrada ao bloquear.</td></tr>
+    </table>
+  </div>
+
+  <h2>3. Confirmação antes de agir</h2>
+
+  <?= fre_demo('10-confirm') ?>
+
+  <div class="warn">
+    <p>
+      <strong>Armadilha da condição.</strong> Quando <code>condition</code> é falsa o
+      handler <em>retorna sem fazer nada</em> — inclusive sem executar o
+      <code>onclick</code> que ele removeu do botão. Se o botão tinha um
+      <code>onclick</code> e a regra é condicional, prefira declarar as ações em
+      <code>action</code>, para o comportamento não depender de qual ramo caiu.
+    </p>
+  </div>
+
+  <h2>4. Ligando tudo ao seu submit</h2>
+  <p>As duas verificações, na ordem em que o guarda do núcleo as faria:</p>
+  <pre><code>form.addEventListener('submit', (e) =&gt; {
+  const engine = window.__formRuleEnginesByName[form.getAttribute('name')];
+
+  // 1. regras declaradas em prevent_submit_when
+  const prevent = engine.plugins.get('prevent-submit');
+  if (prevent) {
+    const r = prevent.validateBeforeSubmit(form.getAttribute('name'));
+    if (!r.valid) { e.preventDefault(); engine.showMessage('error', r.message); return; }
+  }
+
+  // 2. validações remotas pendentes ou reprovadas
+  if (engine.hasRemoteValidationErrors()) {
+    e.preventDefault();
+    engine.showMessage('error', Array.from(engine.remoteValidations.values())[0]);
+  }
+});</code></pre>
+
+<?php fre_pagina_fim(['form_estado' => 'formRemoto', 'script' => <<<'JS'
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.querySelector('form[name="formPrevent"]');
+  var engine = window.__formRuleEnginesByName['formPrevent'];
+  var remoto = window.__formRuleEnginesByName['formRemoto'];
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var prevent = engine.plugins.get('prevent-submit');
+    if (prevent) {
+      var r = prevent.validateBeforeSubmit('formPrevent');
+      if (!r.valid) { engine.showMessage('error', r.message); return; }
+    }
+    if (remoto && remoto.hasRemoteValidationErrors()) {
+      engine.showMessage('error', Array.from(remoto.remoteValidations.values())[0]);
+      return;
+    }
+    Demo.toast('Passou nas duas verificações — enviaria agora.', 'info');
+  });
+});
+</script>
+JS
+]); ?>

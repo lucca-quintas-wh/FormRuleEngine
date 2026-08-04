@@ -1,16 +1,14 @@
 /**
  * Utilitários dos exemplos — NÃO fazem parte da engine.
  *
- * Fornecem três coisas:
- *   1. Demo.hydrate()  — cada bloco <template data-src> é clonado para virar o
- *                        exemplo vivo E impresso como código-fonte logo abaixo.
- *                        Assim o que você lê é literalmente o que está rodando.
- *   2. Demo.log()      — painel de eventos, para ver a engine reagindo.
- *   3. Demo.state()    — painel com o valor atual de cada campo do formulário.
+ *   Demo.log()               painel de eventos, para ver a engine reagindo
+ *   Demo.state()             painel com o valor atual de cada campo
+ *   Demo.toast()             mensagem visível
+ *   Demo.installMessaging()  liga o toast ao showMessage() da engine
+ *   Demo.watchEngineEvents() loga visibility:changed, step:change e afins
  *
- * Este arquivo é carregado ANTES do bootstrap da engine, porque a hidratação
- * precisa acontecer enquanto o documento ainda está sendo montado (o bootstrap
- * varre o DOM no DOMContentLoaded).
+ * A montagem dos exemplos é do lado do servidor: cada demo é uma config PHP
+ * compilada em `demos/*.php`. Não há nada a hidratar no cliente.
  */
 window.Demo = (function () {
   'use strict';
@@ -19,43 +17,6 @@ window.Demo = (function () {
     return String(s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  /** Remove a indentação comum, para o código impresso não sair todo deslocado. */
-  function dedent(text) {
-    var lines = text.replace(/^\n/, '').replace(/\s+$/, '').split('\n');
-    var indent = lines.reduce(function (min, line) {
-      if (!line.trim()) return min;
-      var m = line.match(/^\s*/)[0].length;
-      return m < min ? m : min;
-    }, Infinity);
-    if (!isFinite(indent)) indent = 0;
-    return lines.map(function (l) { return l.slice(indent); }).join('\n');
-  }
-
-  /**
-   * Clona cada <template data-src> para dentro do documento e imprime o fonte.
-   * O atributo data-src pode conter um rótulo ("HTML do exemplo" é o padrão).
-   */
-  function hydrate(root) {
-    var scope = root || document;
-    Array.prototype.forEach.call(scope.querySelectorAll('template[data-src]'), function (tpl) {
-      var raw = dedent(tpl.innerHTML);
-
-      var live = document.createElement('div');
-      live.className = 'demo-live';
-      live.appendChild(tpl.content.cloneNode(true));
-      tpl.parentNode.insertBefore(live, tpl.nextSibling);
-
-      var details = document.createElement('details');
-      details.className = 'demo-code';
-      if (tpl.hasAttribute('data-open')) details.open = true;
-      details.innerHTML =
-        '<summary>' + escapeHtml(tpl.getAttribute('data-src') || 'HTML do exemplo') + '</summary>' +
-        '<pre><code></code></pre>';
-      details.querySelector('code').textContent = raw;
-      live.parentNode.insertBefore(details, live.nextSibling);
-    });
   }
 
   /* ── painel de log ────────────────────────────────────────────────────── */
@@ -181,10 +142,7 @@ window.Demo = (function () {
     });
   }
 
-  hydrate(document);
-
   return {
-    hydrate: hydrate,
     log: log,
     toast: toast,
     installMessaging: installMessaging,

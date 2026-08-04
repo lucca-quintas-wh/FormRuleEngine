@@ -43,6 +43,33 @@ origem; num pacote público isso não existe, e sem isso ninguém adota.
 - [ ] **Só a primeira chave do objeto de condição é avaliada.** `{"A":"1","B":"2"}`
       ignora `B` silenciosamente. Decidir entre tratar como `AND` implícito
       (mudança de comportamento) ou avisar no console em modo dev.
+- [ ] **`label_when` em forma de lista é mal compilado.** Mesma família da
+      pertinência com 2 valores, achada ao escrever os exemplos. `label_when` está
+      em `REGRAS_CONDICAO` do `FormRuleCompiler`, mas o formato que o plugin `label`
+      espera é uma LISTA de objetos com a chave `label`; lista sequencial vira
+      `['AND' => …]` no normalizador. O plugin recebe objeto onde esperava array,
+      cai no ramo de condição simples e o rótulo nunca muda — em silêncio.
+      Verificado: `FormRuleCompiler::encode([['TipoDoc'=>'F','label'=>'CPF'],…])`
+      devolve `{"AND":[{"TipoDoc":"F","label":"CPF"},…]}`. Provável correção: mover
+      `label_when` para `REGRAS_OBJETO` (a forma de lista É uma regra-objeto), ou
+      normalizar item a item preservando a lista.
+- [ ] **`trigger_when` está quebrado.** Em `plugins/form-rule-trigger.js:49`, o alvo
+      é resolvido com `this.findInput(targetField)`, mas `targetField` é o *nome* do
+      campo (string) e `findInput()` só faz `element.querySelector(...)`. Resultado:
+      `TypeError: element.querySelector is not a function` dentro do handler de
+      `change`, e o evento nunca chega ao alvo. Confirmado em jsdom com um formulário
+      mínimo. Correção: `this.engine.form.querySelector(\`[name="${targetField}"]\`)`.
+      Enquanto isso, o mesmo efeito se obtém com a ação `trigger` de
+      `on_success`/`chain`.
+- [ ] **`data-submit-handler` nunca é lido.** O gerador PHP de origem emite o
+      atributo sem o sufixo, mas `registerPlugin()` procura `data-<nome>-when` —
+      isto é, `data-submit-handler-when`. Decidir entre corrigir o gerador ou aceitar
+      as duas formas no scan.
+- [ ] **Checkbox sem `value` explícito quebra a condição em silêncio.**
+      `getFieldValue()` faz `field.checked ? (field.value || 'S') : 'N'`, mas o HTML
+      já define `"on"` como valor padrão — então o fallback `'S'` nunca acontece e
+      `{"Aceite":"S"}` é sempre falso. Ou normalizar (`checked ? 'S' : 'N'` quando
+      não há atributo `value`), ou documentar como requisito do markup.
 
 **Por que primeiro:** todo item abaixo é mudança de comportamento. Sem teste, não
 há como distinguir "extraí" de "quebrei".

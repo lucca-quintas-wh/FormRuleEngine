@@ -1,0 +1,133 @@
+<?php fre_pagina_inicio('05-valores-calculados'); ?>
+
+  <h1><code>set_value_when</code> · <code>computed_when</code></h1>
+  <p class="lead">
+    Os dois plugins que <em>escrevem</em> em campos. Ambos gravam por
+    <strong>nome</strong> (<code>target</code> / as chaves de <code>values</code>), não
+    no elemento onde a regra está — o que significa que a regra pode morar em qualquer
+    lugar do formulário.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <h2>1. Definir valor por template</h2>
+  <p>
+    <code>values</code> é um mapa <em>campo → template</em>. No template,
+    <code>{OutroCampo}</code> é substituído pelo valor atual daquele campo. A regra
+    reavalia sempre que qualquer campo citado (no template ou na condição) muda.
+  </p>
+
+  <?= fre_demo('05-template', ['aberto' => true]) ?>
+
+  <h2>2. Definir valor sob condição</h2>
+
+  <?= fre_demo('05-condicional') ?>
+
+  <div class="warn">
+    <p>
+      <strong>Sobrescreve o que o usuário digitou.</strong> A regra roda a cada
+      mudança de dependência e não sabe se o valor atual veio dela ou de uma pessoa.
+      Para campos que o usuário também edita, prefira <code>copy_when</code> (que
+      guarda o valor original) ou <code>lock_when</code> (que trava e restaura) — veja
+      a <a href="?p=06-copiar-travar-reverter">página 06</a>.
+    </p>
+  </div>
+
+  <h2>3. Expressões aritméticas</h2>
+  <p>
+    <code>computed_when</code> com <code>expression</code>: o template é resolvido e,
+    <strong>se</strong> o resultado contiver apenas números e
+    <code>+ - * / ( ) . ,</code>, é avaliado como aritmética. Qualquer outro caractere
+    faz o plugin devolver a string resolvida como está — o que transforma o mesmo
+    mecanismo em concatenação de texto.
+  </p>
+
+  <?= fre_demo('05-expressao') ?>
+
+  <div class="warn">
+    <p>
+      <strong>Não coloque a regra que escreve X e a regra que lê X no mesmo
+      elemento.</strong> As dependências são calculadas por elemento: se um
+      <code>computed_when</code> tem <code>'target' =&gt; 'Subtotal'</code> numa regra
+      e <code>{Subtotal}</code> na outra, <code>Subtotal</code> vira dependência do
+      próprio elemento. Gravar dispara <code>change</code>, que reavalia o elemento,
+      que grava de novo — <strong>laço infinito</strong>, e a aba trava.
+    </p>
+    <p>
+      A regra prática: agrupe no mesmo atributo apenas cálculos <em>irmãos</em> (que
+      leem as mesmas origens); separe os que formam uma <em>cadeia</em>. Vale para
+      <code>set_value_when</code> pelo mesmo motivo.
+    </p>
+  </div>
+
+  <div class="note">
+    <p>
+      <strong>Por que não é <code>eval</code> livre.</strong> A expressão só é
+      executada depois de passar por <code>/^[0-9+\-*/ ().,]+$/</code>. Um valor de
+      campo com letras não vira código: cai no ramo de texto. Ainda assim, a
+      substituição acontece antes do teste — trate <code>expression</code> como parte
+      do seu template server-side, não como algo que o usuário final compõe.
+    </p>
+  </div>
+
+  <div class="tip">
+    <p>
+      <strong>Formatado é para mostrar; cru é para comparar.</strong> Os comparadores
+      numéricos da DSL usam <code>parseFloat</code>, e
+      <code>parseFloat("1.234,56")</code> devolve <code>1.234</code> — o ponto vira
+      decimal. Se um campo formatado precisa entrar numa condição, mantenha ao lado
+      uma cópia crua num <code>hidden</code>: é um campo e uma regra a mais, e evita
+      uma classe inteira de bug silencioso. O
+      <a href="?p=17-casos-completos">caso "cadastro"</a> faz exatamente isso.
+    </p>
+  </div>
+
+  <h2>4. Idade e faixa etária</h2>
+
+  <?= fre_demo('05-idade') ?>
+
+  <p>Com faixas explícitas, o formato é este — e <code>lt</code> cobre o "abaixo de":</p>
+  <pre><code>'computed_when' =&gt; [
+    'target' =&gt; 'Faixa', 'type' =&gt; 'age_band', 'source' =&gt; 'Nascimento',
+    'bands'  =&gt; [
+        ['lt' =&gt; 18, 'value' =&gt; 'menor'],
+        ['min' =&gt; 18, 'max' =&gt; 59, 'value' =&gt; 'adulto'],
+        ['min' =&gt; 60, 'value' =&gt; 'idoso'],
+    ],
+]</code></pre>
+
+  <div class="note">
+    <p>
+      O cálculo de idade foi reescrito na extração. O do legado dividia o intervalo
+      por 360 dias e somava um mês por usar o mês base-zero sem descontar 1, o que dava
+      um ano a mais em vários nascimentos. Como faixa etária define preço, o erro era
+      cobrado do cliente.
+    </p>
+  </div>
+
+  <h2>5. Diferença entre datas</h2>
+
+  <?= fre_demo('05-datas') ?>
+
+  <h2>6. Cálculo condicional</h2>
+
+  <?= fre_demo('05-calculo-condicional') ?>
+
+  <h2>7. Referência das chaves</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Plugin</th><th>Descrição</th></tr>
+      <tr><td><code>target</code></td><td>computed</td><td><strong>Obrigatória.</strong> Nome do campo que recebe o valor.</td></tr>
+      <tr><td><code>values</code></td><td>set-value</td><td>Mapa <em>campo → template</em>. Vários campos por regra.</td></tr>
+      <tr><td><code>condition</code></td><td>ambos</td><td>Condição da DSL. Sem ela, a regra vale sempre.</td></tr>
+      <tr><td><code>expression</code></td><td>computed</td><td>Template; aritmética se o resultado for só números e operadores.</td></tr>
+      <tr><td><code>value</code></td><td>computed</td><td>Template puro, sem tentativa de cálculo.</td></tr>
+      <tr><td><code>type</code></td><td>computed</td><td><code>age</code>, <code>age_band</code> ou <code>days_between</code>.</td></tr>
+      <tr><td><code>source</code></td><td>computed</td><td>Campo de origem para <code>age</code> / <code>age_band</code>.</td></tr>
+      <tr><td><code>start</code>, <code>end</code></td><td>computed</td><td>Campos de data para <code>days_between</code>.</td></tr>
+      <tr><td><code>bands</code></td><td>computed</td><td>Faixas explícitas: <code>{min,max,value}</code> ou <code>{lt,value}</code>.</td></tr>
+      <tr><td><code>parse</code></td><td>computed</td><td><code>'br'</code>: normaliza números <code>1.234,56</code> antes de calcular.</td></tr>
+      <tr><td><code>format</code></td><td>computed</td><td><code>'br'</code>: formata o resultado com 2 casas, padrão pt-BR.</td></tr>
+    </table>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formExpressao']); ?>

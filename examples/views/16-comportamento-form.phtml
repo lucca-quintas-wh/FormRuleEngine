@@ -1,0 +1,216 @@
+<?php fre_pagina_inicio('16-comportamento-form'); ?>
+
+  <h1><code>behavior_when</code> · <code>submit_handler</code></h1>
+  <p class="lead">
+    A segunda metade do contrato: regras que valem para o <strong>formulário
+    inteiro</strong>, não para um campo. É por aqui que ele envia — e é também a parte
+    mais acoplada ao sistema onde a engine nasceu.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery</strong> · e símbolos do host (ver abaixo)</span>
+
+  <div class="warn">
+    <p>
+      <strong>Esta página é documentação, não demonstração.</strong> Os dois plugins
+      chamam funções que só existem no CRM de origem — <code>sendForm</code>,
+      <code>DrawerService</code>, <code>refreshMutationTarget</code>,
+      <code>openLink</code>. Montar um exemplo vivo exigiria reimplementar esse shell
+      inteiro, e o resultado documentaria a imitação, não a engine.
+    </p>
+    <p>
+      O que está aqui é o contrato real, extraído da leitura do código, mais o desenho
+      do <em>host adapter</em> que deve fechar essa fronteira — item 2 do
+      <a href="../ROADMAP.md">roadmap</a>.
+    </p>
+  </div>
+
+  <h2>1. Onde a regra mora</h2>
+  <p>
+    No <code>&lt;form&gt;</code>, não no campo. A engine, ao registrar um plugin,
+    procura o atributo nos descendentes <em>e</em> no próprio formulário — é o que
+    permite uma regra de escopo global. Na config, são chaves de topo:
+  </p>
+  <pre><code>return [
+    'name' =&gt; 'formPedido',
+    'behaviors' =&gt; [
+        ['type' =&gt; 'prevent_enter'],
+        ['type' =&gt; 'ajax_submit', 'route' =&gt; '/api/salvar', 'expose' =&gt; 'submitPedido'],
+    ],
+    'sections' =&gt; [ … ],
+];</code></pre>
+  <p>
+    Note que <code>behaviors</code> é uma <strong>lista</strong> de objetos, cada um com
+    um <code>type</code>. Os outros <code>*_when</code> são condição ou objeto de
+    configuração; este é uma lista de comportamentos.
+  </p>
+
+  <h2>2. Os cinco tipos</h2>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th><code>type</code></th><th>O que faz</th><th>Depende do host?</th></tr>
+      <tr>
+        <td><code>ajax_submit</code></td>
+        <td>Publica uma função global que serializa e envia o formulário por AJAX, com modos, guardas e ações pós-sucesso.</td>
+        <td><strong>sim</strong> — drawer, refresh, mensagens</td>
+      </tr>
+      <tr>
+        <td><code>ajax_mutations</code></td>
+        <td>Liga botões de ação (excluir linha, marcar como pago) a rotas, com confirmação e refresh do alvo.</td>
+        <td><strong>sim</strong></td>
+      </tr>
+      <tr>
+        <td><code>token_insert</code></td>
+        <td>Insere um token no cursor de um campo ao clicar num chip — editor de template de mensagem.</td>
+        <td>não</td>
+      </tr>
+      <tr>
+        <td><code>prevent_enter</code></td>
+        <td>Enter não submete (exceto em <code>textarea</code> e nos botões).</td>
+        <td>não</td>
+      </tr>
+      <tr>
+        <td><code>intl_phone</code></td>
+        <td>Inicializa o seletor internacional de telefone.</td>
+        <td>parcial — chama <code>window.loadIntlTelInput</code> se existir</td>
+      </tr>
+    </table>
+  </div>
+
+  <h3><code>prevent_enter</code> — o mais simples, e útil</h3>
+  <pre><code>'behaviors' =&gt; [['type' =&gt; 'prevent_enter']]</code></pre>
+  <p>
+    Existe para formulários que montam uma lista antes de enviar: ali o Enter no meio do
+    preenchimento dispararia o envio com a lista pela metade. Não depende de nada do
+    host — é o único tipo que você pode usar hoje em qualquer projeto.
+  </p>
+
+  <h3><code>token_insert</code></h3>
+  <pre><code>['type' =&gt; 'token_insert',
+ 'trigger'    =&gt; '[data-template-token]',  // seletor dos chips (padrão)
+ 'token_attr' =&gt; 'templateToken',          // chave no dataset do chip
+ 'target'     =&gt; 'CorpoMensagem']          // campo que recebe o token</code></pre>
+  <p>
+    Insere na posição do cursor, preserva o resto do texto, reposiciona a seleção depois
+    do token e emite <code>input</code> — para que máscaras e contadores reajam. Também
+    não depende do host.
+  </p>
+
+  <h3><code>ajax_submit</code></h3>
+  <p>
+    O mais denso. Publica <code>window[expose]</code>, e é essa função que o botão chama.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Descrição</th></tr>
+      <tr><td><code>expose</code></td><td><strong>Obrigatória.</strong> Nome da global publicada. Sem ela, o comportamento não é ligado.</td></tr>
+      <tr><td><code>route</code>, <code>method</code>, <code>data_type</code></td><td>Destino da requisição. A rota é prefixada por <code>window.syspath</code>.</td></tr>
+      <tr><td><code>payload</code></td><td>Corpo explícito (templates resolvidos). Sem ele, serializa o formulário.</td></tr>
+      <tr><td><code>append_data</code>, <code>serialize_extra</code></td><td>Acréscimos ao corpo serializado.</td></tr>
+      <tr><td><code>modes</code></td><td>Lista de <code>['when' =&gt; …, …]</code>: o primeiro cujo <code>when</code> casa <strong>sobrescreve</strong> o comportamento base.</td></tr>
+      <tr><td><code>guards</code></td><td>Lista de <code>['condition' =&gt; …, 'message' =&gt; …]</code>: condição verdadeira <strong>aborta</strong> o envio.</td></tr>
+      <tr><td><code>success_message</code>, <code>error_message</code></td><td>Mensagens.</td></tr>
+      <tr><td><code>success_actions</code></td><td>Lista de ações do <code>runActions()</code> (as mesmas da <a href="?p=11-botoes-gatilhos">página 11</a>).</td></tr>
+      <tr><td><code>success_callback</code></td><td>Nome de uma global chamada com <code>(response, behavior, form)</code>.</td></tr>
+      <tr><td><code>success_redirect</code>, <code>return_query</code></td><td>Navegação após sucesso.</td></tr>
+      <tr><td><code>success_refresh</code>, <code>success_drawer</code>, <code>close_drawer</code></td><td>Integração com o shell do host.</td></tr>
+    </table>
+  </div>
+
+  <div class="tip">
+    <p>
+      <strong><code>modes</code> e <code>guards</code> merecem atenção</strong> mesmo
+      que você não use este plugin. São os dois lugares onde a DSL de condições aparece
+      fora de uma regra de campo, e são a resposta declarativa para os dois
+      <code>if</code> que sempre acabam num JS de view: "para onde enviar" e "posso
+      enviar?".
+    </p>
+  </div>
+
+  <h3><code>ajax_mutations</code></h3>
+  <pre><code>['type' =&gt; 'ajax_mutations', 'mutations' =&gt; [
+    ['trigger' =&gt; '[data-acao="excluir"]',
+     'route'   =&gt; '/api/item/excluir',
+     'payload' =&gt; ['id' =&gt; '{trigger.id}'],
+     'confirm' =&gt; 'Excluir este item?'],
+]]</code></pre>
+  <p>
+    Delegação de clique dentro do container do formulário (ou do drawer), com validação,
+    confirmação, loading e refresh do alvo. É o tipo mais amarrado ao host:
+    <code>refreshMutationTarget</code> e <code>DrawerService</code> aparecem aqui.
+  </p>
+
+  <h2>3. <code>submit_handler</code></h2>
+  <p>
+    Plugin separado, mesma ideia por outro caminho: em vez de publicar uma global, ele
+    <strong>intercepta</strong> o <code>onsubmit</code> do formulário e os cliques nos
+    botões de submit.
+  </p>
+  <pre><code>'submit_handler' =&gt; [
+    'url'     =&gt; '/api/gerar-oportunidade',
+    'method'  =&gt; 'POST',
+    'confirm' =&gt; ['type' =&gt; 'swal', 'title' =&gt; 'Oportunidade gerada',
+                  'text' =&gt; 'Deseja abri-la?', 'show_cancel' =&gt; true],
+    'on_success' =&gt; [
+        ['action' =&gt; 'message', 'text' =&gt; 'Gerada!', 'duration' =&gt; 2500],
+        ['action' =&gt; 'close_drawer'],
+        ['action' =&gt; 'open_modal', 'route' =&gt; 'Oportunidade/edit',
+         'params' =&gt; 'cod={response.codigo}'],
+    ],
+    'on_fail' =&gt; [['action' =&gt; 'message', 'text' =&gt; 'Erro', 'type' =&gt; 'error']],
+]</code></pre>
+
+  <div class="warn">
+    <p>
+      <strong>Divergência de nome de atributo.</strong> O gerador PHP do projeto de
+      origem emite <code>data-submit-handler</code>, mas a engine registra plugins
+      procurando <code>data-&lt;nome&gt;-when</code> — ou seja,
+      <code>data-submit-handler-when</code>. Do jeito que está, o atributo emitido nunca
+      é encontrado. O emissor desta pasta usa a forma com <code>-when</code>, que é a
+      que o runtime lê.
+    </p>
+  </div>
+
+  <h2>4. A fronteira do host, em números</h2>
+  <p>
+    Dos 27 plugins, <strong>22</strong> não referenciam nada externo. O acoplamento está
+    concentrado em cinco arquivos:
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Arquivo</th><th>Símbolos externos</th><th>Natureza</th></tr>
+      <tr><td><code>form-rule-behavior.js</code></td><td><code>DrawerService</code>, <code>refreshMutationTarget</code>, <code>openLinkDiv</code>, <code>openLink</code>, eventos <code>crm:drawer:*</code></td><td><strong>real</strong> — precisa virar adapter</td></tr>
+      <tr><td><code>form-rule-submit-handler.js</code></td><td><code>sendForm</code>, <code>DrawerService</code></td><td><strong>real</strong></td></tr>
+      <tr><td><code>form-rule-sequence.js</code></td><td><code>Swal</code>, Select2</td><td>parcial — <code>Swal</code> já é opcional</td></tr>
+      <tr><td><code>form-rule-dynamic-table.js</code></td><td><code>Swal</code></td><td>opcional, já protegido por <code>typeof</code></td></tr>
+      <tr><td><code>form-rule-revert.js</code></td><td>Select2</td><td>parcial</td></tr>
+      <tr><td><code>form-rule-engine.js</code></td><td><code>window.sendForm</code></td><td>já degrada sozinho</td></tr>
+    </table>
+  </div>
+
+  <h2>5. O adapter proposto</h2>
+  <p>
+    Uma interface pequena, implementação padrão em vanilla, e quem tem um shell próprio
+    (drawer, modal, SPA) injeta o seu:
+  </p>
+  <pre><code>engine.setHost({
+  confirm:    (opcoes) =&gt; Promise&lt;boolean&gt;,  // padrão: window.confirm
+  toast:      (tipo, texto) =&gt; void,         // padrão: um toast mínimo
+  submit:     (config)  =&gt; Promise&lt;any&gt;,     // padrão: fetch()
+  refresh:    (alvo)    =&gt; void,             // padrão: no-op
+  closePanel: ()        =&gt; void              // padrão: no-op
+});</code></pre>
+  <p>O critério de pronto é objetivo, e está escrito no roadmap:</p>
+  <pre><code>grep -rE 'DrawerService|refreshMutationTarget|openLinkDiv' src/   # sem resultado</code></pre>
+
+  <h2>6. O que fazer hoje</h2>
+  <ul>
+    <li>Use <code>prevent_enter</code> e <code>token_insert</code> à vontade — não dependem de nada.</li>
+    <li>Para enviar, escreva o seu handler de submit chamando as verificações da
+        <a href="?p=10-validacao-remota">página 10</a>. São dez linhas, e é o que a
+        <a href="?p=17-casos-completos">página 17</a> faz.</li>
+    <li>Se quiser <code>ajax_submit</code>, defina as globais que ele espera — ou espere
+        o adapter.</li>
+  </ul>
+
+<?php fre_pagina_fim(['sem_paineis' => true]); ?>

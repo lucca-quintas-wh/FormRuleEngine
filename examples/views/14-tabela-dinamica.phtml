@@ -1,0 +1,173 @@
+<?php fre_pagina_inicio('14-tabela-dinamica'); ?>
+
+  <h1><code>dynamic_table</code> · <code>repeater-init</code></h1>
+  <p class="lead">
+    Os dois plugins que não são "regra de campo": linhas que o usuário adiciona e
+    remove. Um traz totalizadores e cascata por linha; o outro faz as regras normais
+    valerem em linhas criadas depois que a página carregou.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery</strong> (cascatas) · SweetAlert2 opcional</span>
+
+  <div class="note">
+    <p>
+      <strong>Esta é a única página cujo markup é HTML cru.</strong> A tabela é emitida
+      por um renderizador próprio no projeto de origem
+      (<code>Controller::renderDynamicTable</code>); o que <code>dynamic_table</code> faz
+      é apenas <em>inicializar</em> o que já está na página. Deixamos o markup à vista
+      na config porque é ele que documenta o contrato de seletores.
+    </p>
+  </div>
+
+  <h2>1. Tabela dinâmica</h2>
+  <p>
+    Adicione linhas, escolha a operadora (a coluna Plano é carregada por cascata
+    <strong>daquela linha</strong>), preencha vidas e valor. Os totais e os campos
+    ocultos <code>TotalGeral</code>/<code>TotalVidas</code> se atualizam sozinhos.
+  </p>
+
+  <?= fre_demo('14-tabela', ['aberto' => true]) ?>
+
+  <div class="warn">
+    <p>
+      <strong>Regra declarada como array vazio é descartada em silêncio.</strong>
+      Tanto o emissor quanto o <code>FormRuleCompiler</code> pulam a chave com
+      <code>empty()</code> — e <code>empty([])</code> é verdadeiro em PHP. Como o
+      <code>dynamic_table</code> não exige configuração nenhuma, é fácil escrever
+      <code>'dynamic_table' =&gt; []</code> e passar meia hora procurando por que o
+      plugin não inicializa. Ponha qualquer chave dentro.
+    </p>
+  </div>
+
+  <h3>As peças do markup</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Seletor</th><th>Papel</th></tr>
+      <tr><td><code>.ilu-dynamic-table-wrapper[data-dynamic-table-config]</code></td><td>A raiz. Toda a delegação de eventos é ligada aqui, uma vez só (<code>data-dynamic-table-initialized</code>).</td></tr>
+      <tr><td><code>table.ilu-dynamic-table</code></td><td>A tabela; <code>tbody tr.ilu-dt-row</code> são as linhas contadas.</td></tr>
+      <tr><td><code>template[data-dt-row-template]</code></td><td>O molde da linha nova.</td></tr>
+      <tr><td><code>[data-dt-field="x"]</code></td><td>Marca a célula/controle que guarda o campo <code>x</code>. É por aqui que os totais e as cascatas o encontram.</td></tr>
+      <tr><td><code>[data-summary-field="x"]</code></td><td>Célula que exibe a soma de <code>x</code>.</td></tr>
+      <tr><td><code>[data-dt-action="add"|"remove"]</code></td><td>Botões.</td></tr>
+      <tr><td><code>.totalItens</code></td><td>Onde o texto de <code>totals.footer</code> é escrito.</td></tr>
+      <tr><td><code>tr.ilu-dt-empty-row</code></td><td>Linha de "vazio", removida na primeira inserção.</td></tr>
+    </table>
+  </div>
+
+  <h3>Configuração</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Descrição</th></tr>
+      <tr><td><code>totals.targets</code></td><td><code>['NomeDoCampo' =&gt; 'campoDaLinha']</code> — escreve a soma num campo do formulário.</td></tr>
+      <tr><td><code>totals.footer</code></td><td>Template com <code>{valor}</code> e <code>{vidas}</code>, escrito em <code>.totalItens</code>.</td></tr>
+      <tr><td><code>remove_confirm</code></td><td>Texto de confirmação. Usa SweetAlert2 se existir; senão <code>window.confirm</code>; sem a chave, remove direto.</td></tr>
+      <tr><td><code>cascades[]</code></td><td><code>trigger, params, target, url, method, placeholder, value_key, label_key, require</code>.</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <p>
+      <strong>Por que a cascata daqui não é o <code>fetch_when</code>.</strong> O
+      <code>fetch_when</code> casa campos por <code>name</code>, e numa tabela dinâmica
+      todas as linhas repetem <code>name="planoMulti[]"</code> — a linha 3 repopularia o
+      combo da linha 1. As funções desta tabela resolvem sempre dentro da
+      <code>&lt;tr&gt;</code> de origem.
+    </p>
+    <p>
+      <strong>E por que não é o repeater.</strong> O repeater indexa os nomes
+      (<code>campo0</code>, <code>campo1</code>); o backend legado lê as linhas como
+      arrays paralelos casados por índice (<code>operadoraMulti[]</code> com
+      <code>planoMulti[]</code>). Preservar o <code>[]</code> é um requisito de
+      contrato, não um detalhe.
+    </p>
+  </div>
+
+  <div class="tip">
+    <p>
+      <strong>Números em formato brasileiro.</strong> A soma passa por um parser que
+      remove <code>R$</code> e espaços, descarta o ponto de milhar e troca a vírgula por
+      ponto. Escrever <code>1.234,56</code> na coluna Valor funciona.
+    </p>
+  </div>
+
+  <h3>API global</h3>
+  <pre><code>iluDynamicTableInit(raiz)              // (re)liga tabelas dentro de `raiz`
+iluDynamicTableAddRow('tabelaItens')  // adiciona uma linha, devolve o &lt;tr&gt;
+iluDynamicTableUpdateSummary('tabelaItens')
+iluDynamicTableGetRowCount('tabelaItens')</code></pre>
+  <p>
+    E a tabela emite <code>iluDynamicTable:changed</code> (com
+    <code>detail.totals</code>) e <code>iluDynamicTable:rowAdded</code>. O painel de
+    eventos está escutando os dois.
+  </p>
+
+  <h2>2. Regras em linhas criadas depois</h2>
+  <p>
+    Aqui está o problema que o <code>repeater-init</code> resolve. A engine monta o mapa
+    de dependências <strong>no registro do plugin</strong>, varrendo o DOM daquele
+    momento. Uma linha adicionada depois traz atributos <code>data-*-when</code> que
+    ninguém leu — as regras dela simplesmente não existem.
+  </p>
+
+  <?= fre_demo('14-repeater') ?>
+
+  <p>O código que dispara o evento, no seu componente de linhas:</p>
+  <pre><code>const linha = document.createElement('div');
+linha.innerHTML = molde;
+container.appendChild(linha);
+
+linha.dispatchEvent(new CustomEvent('ilu:repeater:row-added', {
+  bubbles: true,
+  detail: { row: linha }
+}));</code></pre>
+
+  <div class="warn">
+    <p>
+      <strong><code>addElement()</code> não é idempotente.</strong> Ele empilha o
+      elemento em <code>this.elements</code> e no mapa de dependências. Registrar a
+      mesma linha duas vezes faz a regra ser avaliada duas vezes por mudança — e em
+      <code>fetch_when</code> ou <code>remote_validate_when</code> isso significa
+      <em>duas requisições</em>. É por isso que o plugin protege o listener com uma
+      bandeira global: sem ela, cada reinjeção do script somaria outro listener, e o
+      navegador não deduplica funções diferentes com o mesmo corpo.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formTabela', 'script' => <<<'JS'
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var tabela = document.getElementById('tabelaItens');
+  if (tabela) tabela.addEventListener('iluDynamicTable:changed', function (e) {
+    Demo.log('totais: ' + JSON.stringify(e.detail.totals));
+  });
+  var wrapper = document.getElementById('tabelaItens_wrapper');
+  if (wrapper) wrapper.addEventListener('iluDynamicTable:rowAdded', function () {
+    Demo.log('linha adicionada');
+  });
+
+  /* Repeater simulado: um componente de verdade (IluRepeater, no projeto de
+     origem) faz isto — monta a linha, insere, e avisa com o evento que borbulha. */
+  var lista = document.getElementById('listaDependentes');
+  var n = 0;
+  document.getElementById('btnAddDependente').addEventListener('click', function () {
+    n++;
+    var linha = document.createElement('div');
+    linha.className = 'row';
+    linha.style.marginBottom = '10px';
+    linha.innerHTML =
+      '<div><label>Nome</label><input name="DepNome' + n + '"></div>' +
+      '<div><label>Parentesco</label><select name="DepParentesco' + n + '">' +
+        '<option value="conjuge">Cônjuge</option><option value="filho">Filho(a)</option>' +
+      '</select></div>' +
+      '<div data-visible-when=\'{"DepParentesco' + n + '":"filho"}\' ' +
+           'data-demo-name="idade do dependente ' + n + '">' +
+        '<label>Idade</label><input type="number" name="DepIdade' + n + '"></div>';
+    lista.appendChild(linha);
+    linha.dispatchEvent(new CustomEvent('ilu:repeater:row-added', {
+      bubbles: true, detail: { row: linha }
+    }));
+    Demo.log('dependente ' + n + ' adicionado e registrado na engine');
+  });
+});
+</script>
+JS
+]); ?>

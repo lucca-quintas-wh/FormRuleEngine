@@ -1,0 +1,271 @@
+<?php fre_pagina_inicio('99-referencia'); ?>
+
+  <h1>Referência completa</h1>
+  <p class="lead">
+    Todos os atributos, a gramática das condições, as ações, o contrato visual e as
+    armadilhas conhecidas — em uma página, para consulta.
+  </p>
+
+  <h2>As três camadas</h2>
+  <pre><code>forms/pedido.php                 ← a config declarativa que você escreve
+        ↓  FormRuleCompiler::atributos()
+&lt;div data-visible-when='{"Tipo":"F"}'&gt;  ← o atributo compilado
+        ↓  form-visibility-v2.js
+o campo aparece e some sozinho          ← o runtime</code></pre>
+  <p>
+    A engine não sabe que existe PHP: ela lê atributos. O compilador
+    (<code>src/php/FormRuleCompiler.php</code>) é quem traduz as formas idiomáticas de
+    PHP para a forma canônica da DSL, e é coberto por testes de paridade contra o trait
+    de origem (<code>tests/paridade-php.php</code>) e de contrato com o runtime
+    (<code>tests/cross-php-js.js</code>).
+  </p>
+
+  <h2>Ordem de carregamento</h2>
+  <pre><code>&lt;script src="src/form-rule-engine.js"&gt;&lt;/script&gt;         &lt;!-- núcleo --&gt;
+&lt;script src="src/plugins/form-rule-base.js"&gt;&lt;/script&gt;   &lt;!-- classe base: sempre --&gt;
+&lt;script src="src/plugins/form-rule-visible.js"&gt;&lt;/script&gt; &lt;!-- só o que você usa --&gt;
+&lt;script src="src/form-visibility-v2.js"&gt;&lt;/script&gt;        &lt;!-- bootstrap: por ÚLTIMO --&gt;</code></pre>
+  <ul>
+    <li>O bootstrap varre <code>form[data-form-visibility="true"]</code>. Sem esse atributo, nada acontece — e sem aviso.</li>
+    <li>Plugin não carregado é ignorado em silêncio: você paga só pelo que usa.</li>
+    <li>A inicialização é idempotente (<code>dataset.formVisibilityV2Initialized</code>), o que importa em telas que injetam HTML por AJAX.</li>
+    <li>Para inicializar um trecho injetado depois: <code>initFormVisibilityV2(elementoRaiz)</code>.</li>
+  </ul>
+
+  <h2>Onde cada regra vai parar</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave na config</th><th>Atributo</th><th>Lugar no HTML</th><th>Página</th></tr>
+      <tr><td><code>visible_when</code></td><td><code>data-visible-when</code></td><td>no elemento a esconder — campo, seção, ou até fora do <code>&lt;form&gt;</code></td><td><a href="?p=01-visibilidade">01</a></td></tr>
+      <tr><td><code>required_when</code>, <code>disabled_when</code>, <code>label_when</code>, <code>options_when</code>, <code>mask_when</code>, <code>validate_when</code>, <code>copy_when</code>, <code>fetch_when</code>, <code>populate_when</code>, <code>remote_validate_when</code>, <code>trigger_when</code>, <code>revert_when</code>, <code>password_policy</code></td><td>idem, com <code>-when</code></td><td>no <strong>wrapper</strong> do campo</td><td>—</td></tr>
+      <tr><td><code>set_value_when</code>, <code>computed_when</code>, <code>lock_when</code>, <code>prevent_submit_when</code></td><td>idem</td><td>em qualquer wrapper (agem por <code>target</code>/nome)</td><td><a href="?p=05-valores-calculados">05</a></td></tr>
+      <tr><td><code>visible_when</code>/<code>enabled_when</code> de botão</td><td><code>data-action-when</code></td><td>no <strong>próprio botão</strong>, as duas na mesma chave</td><td><a href="?p=11-botoes-gatilhos">11</a></td></tr>
+      <tr><td><code>confirm_submit</code></td><td><code>data-confirm-submit-when</code></td><td>no próprio botão</td><td><a href="?p=10-validacao-remota">10</a></td></tr>
+      <tr><td><code>behaviors</code>, <code>submit_handler</code></td><td><code>data-behavior-when</code>, <code>data-submit-handler-when</code></td><td>no <code>&lt;form&gt;</code></td><td><a href="?p=16-comportamento-form">16</a></td></tr>
+      <tr><td><code>sequence</code>, <code>sequence_when</code>, <code>sequence_keep</code></td><td><code>data-sequence*</code></td><td>no <strong>controle</strong> (input/select)</td><td><a href="?p=12-sequencia">12</a></td></tr>
+      <tr><td><code>sequence_config</code></td><td><code>data-sequence-config</code></td><td><strong>atributo</strong> de um hidden</td><td><a href="?p=12-sequencia">12</a></td></tr>
+      <tr><td><code>step</code> (na seção)</td><td><code>data-step</code></td><td>na seção</td><td><a href="?p=13-wizard">13</a></td></tr>
+      <tr><td><code>step_config</code></td><td><code>data-step-config</code></td><td><strong>value</strong> de um hidden</td><td><a href="?p=13-wizard">13</a></td></tr>
+      <tr><td><code>dynamic_table</code></td><td><code>data-dynamic-table-when</code></td><td>no elemento que contém o wrapper da tabela</td><td><a href="?p=14-tabela-dinamica">14</a></td></tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    <p>
+      <strong>A armadilha do wrapper.</strong> Os plugins que alteram o input o
+      encontram com <code>element.querySelector('input, select, textarea')</code> —
+      procuram <em>dentro</em>, nunca no próprio elemento. Atributo direto no
+      <code>&lt;input&gt;</code> falha em silêncio. <code>visible_when</code> é a
+      exceção (age no próprio elemento), o que torna a armadilha pior: o primeiro plugin
+      que a maioria experimenta funciona nos dois lugares. <strong>Gerando do servidor,
+      não acontece</strong> — o emissor sempre acerta o lugar.
+    </p>
+  </div>
+
+  <h2>A DSL de condições</h2>
+
+  <h3>O que você escreve em PHP</h3>
+  <pre><code>['Campo' =&gt; 'S']                                  // canônica
+['Campo' =&gt; ['A', 'B', 'C']]                      // pertence a (3+ valores)
+['Campo' =&gt; ['&gt;' =&gt; 100]]                         // operador
+['Campo' =&gt; ['&gt;', 100]]                           // par posicional
+['Campo', '&gt;', 100]                               // tripla
+['field' =&gt; 'Campo', 'op' =&gt; '&gt;', 'value' =&gt; 100] // forma longa
+[ $cond1, $cond2 ]                                // lista → AND implícito
+['AND' =&gt; [...]], ['OR' =&gt; [...]]                 // recursivo</code></pre>
+  <p>
+    Apelidos de operador normalizados: <code>=</code>, <code>==</code>,
+    <code>===</code> → <code>eq</code>; <code>&lt;&gt;</code>, <code>!==</code>,
+    <code>neq</code>, <code>not_eq</code> → <code>!=</code>.
+  </p>
+
+  <h3>O que o runtime lê</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Operador</th><th>Comparação</th></tr>
+      <tr><td><code>eq</code></td><td><code>===</code> (igual à forma curta)</td></tr>
+      <tr><td><code>!=</code></td><td><code>!==</code></td></tr>
+      <tr><td><code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code></td><td>numérica, via <code>parseFloat</code></td></tr>
+      <tr><td><code>regex</code></td><td><code>new RegExp(valor).test(campo)</code></td></tr>
+      <tr><td><code>eq_field</code> / <code>neq_field</code></td><td>contra outro campo; o operando é o <em>nome</em> dele</td></tr>
+    </table>
+  </div>
+
+  <h3>Leitura dos campos</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Controle</th><th>Valor lido</th></tr>
+      <tr><td>texto, select simples, textarea</td><td><code>value</code> (string)</td></tr>
+      <tr><td>checkbox</td><td>marcado ⇒ o <code>value</code> do campo · desmarcado ⇒ <code>"N"</code></td></tr>
+      <tr><td>radio</td><td><code>value</code> do marcado, ou <code>null</code></td></tr>
+      <tr><td>select multiple</td><td><strong>array</strong> de valores</td></tr>
+      <tr><td>campo inexistente</td><td><code>null</code></td></tr>
+    </table>
+  </div>
+
+  <h2>Ações (<code>runActions</code>)</h2>
+  <p>
+    Usadas em <code>on_success</code>, <code>on_fail</code>, <code>on_empty</code>,
+    <code>action</code> do <code>confirm_submit</code> e <code>success_actions</code>.
+    Nos templates: <code>{Campo}</code>, <code>{value}</code>, <code>{response}</code>,
+    <code>{response.a.b}</code>.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Ação</th><th>Forma</th></tr>
+      <tr><td><code>set_value</code></td><td><code>['Campo' =&gt; 'template']</code></td></tr>
+      <tr><td><code>set_options</code></td><td><code>['Campo' =&gt; [path, value_key, label_key, include_empty, value]]</code></td></tr>
+      <tr><td><code>set_html</code></td><td><code>['seletor' =&gt; 'template']</code></td></tr>
+      <tr><td><code>toggle</code></td><td><code>[selector, show]</code></td></tr>
+      <tr><td><code>toggle_by_response</code></td><td><code>[selector, path, equals|gt|gte|neq]</code></td></tr>
+      <tr><td><code>message_by_response</code></td><td><code>[path, equals, message|message_path, type]</code></td></tr>
+      <tr><td><code>show_message</code></td><td><code>[type, message]</code></td></tr>
+      <tr><td><code>clear</code></td><td><code>'Campo'</code> ou lista</td></tr>
+      <tr><td><code>trigger</code></td><td><code>'Campo'</code></td></tr>
+      <tr><td><code>call</code></td><td><code>['call' =&gt; 'fn', 'args' =&gt; [...]]</code></td></tr>
+      <tr><td><code>conditional</code></td><td><code>[condition, then, else]</code></td></tr>
+    </table>
+  </div>
+
+  <h2>API pública</h2>
+  <pre><code>window.__formRuleEnginesByName['nomeDoForm']   // por nome — o caminho confiável
+window.formVisibilityManager.engine           // o ÚLTIMO form inicializado da página
+
+engine.refresh()                          // reavalia todas as regras
+engine.addElement(el, 'visible')          // registra um elemento criado em runtime
+engine.evaluateCondition(regra)           // avalia uma condição da DSL
+engine.getFieldValue('Campo')             // leitura normalizada
+engine.setFieldValue('Campo', v, dispararChange = true)
+engine.setFieldOptions('Campo', opcoes, valueKey, labelKey, incluirVazio, selecionarPrimeira)
+engine.clearField('Campo')
+engine.showMessage('error', 'texto')
+engine.hasRemoteValidationErrors()
+engine.plugins.get('prevent-submit').validateBeforeSubmit('nomeDoForm')
+engine.plugins.get('validate').registerValidator('nome', fn)
+
+initFormVisibilityV2(raiz)                // inicializa HTML injetado depois</code></pre>
+
+  <div class="warn">
+    <p>
+      <code>window.formVisibilityManager</code> é sobrescrito a cada formulário
+      inicializado — numa página com vários, ele aponta para o último. Use
+      <code>window.__formRuleEnginesByName[nome]</code>.
+    </p>
+  </div>
+
+  <h3>Eventos emitidos</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Evento</th><th>Onde</th><th>detail</th></tr>
+      <tr><td><code>form-rule-engine:ready</code></td><td>no form, ao terminar de inicializar</td><td><code>{engine}</code></td></tr>
+      <tr><td><code>visibility:changed</code></td><td>no elemento, ao mudar a visibilidade</td><td><code>{visible}</code></td></tr>
+      <tr><td><code>step:change</code></td><td>no form, ao mudar de etapa</td><td><code>{step}</code></td></tr>
+      <tr><td><code>iluDynamicTable:changed</code></td><td>na tabela</td><td><code>{totals, tableId}</code></td></tr>
+      <tr><td><code>iluDynamicTable:rowAdded</code></td><td>no wrapper da tabela</td><td><code>{row, tableId}</code></td></tr>
+    </table>
+  </div>
+
+  <h3>Integração de mensagens</h3>
+  <p>
+    <code>showMessage(tipo, texto)</code> procura, nesta ordem:
+    <code>window.communicate</code>, <code>window.alerta</code>,
+    <code>window.message</code> — e cai em <code>console.error</code> se nenhuma
+    existir. Definir <strong>uma</strong> delas é toda a integração necessária.
+  </p>
+
+  <h2>Contrato visual</h2>
+  <p>
+    Classes que a engine aplica e o seu CSS precisa entender. O bloco pronto está no fim
+    de <code>examples/assets/demo.css</code>.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Classe / atributo</th><th>Aplicada por</th><th>Quando</th></tr>
+      <tr><td><code>form-rule-hidden</code>, <code>is-hidden</code></td><td>visible</td><td>elemento oculto</td></tr>
+      <tr><td><code>form-step-hidden</code></td><td>step</td><td>etapa não ativa</td></tr>
+      <tr><td><code>ilu-input--required</code>, <code>required</code></td><td>required</td><td>no input obrigatório</td></tr>
+      <tr><td><code>ilu-form-label--required</code></td><td>required</td><td>no <code>.ilu-form-label</code> do wrapper</td></tr>
+      <tr><td><code>ilu-input--disabled</code>, <code>ilu-form-field--disabled</code>, <code>form-rule-disabled</code></td><td>disabled</td><td>campo desabilitado</td></tr>
+      <tr><td><code>form-rule-locked</code>, <code>form-rule-locked-input</code></td><td>lock</td><td>campo travado</td></tr>
+      <tr><td><code>form-rule-validated</code>, <code>form-rule-invalid</code></td><td>validate</td><td>campo com regra / reprovado</td></tr>
+      <tr><td><code>form-rule-prevent-submit-error</code></td><td>prevent-submit</td><td>3 s após bloquear o envio</td></tr>
+      <tr><td><code>data-erro="true"</code>, <code>ilu-field-error</code></td><td>password</td><td>senha fora da política</td></tr>
+      <tr><td><code>form-step-field-error</code>, <code>.form-step-error-msg</code></td><td>step</td><td>campo obrigatório vazio na etapa</td></tr>
+    </table>
+  </div>
+
+  <h3>Seletores que a engine procura no seu markup</h3>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Seletor</th><th>Para quê</th></tr>
+      <tr><td><code>.ilu-form-label</code></td><td>rótulo do campo (asterisco de obrigatório, troca de texto)</td></tr>
+      <tr><td><code>[data-label-default]</code></td><td>texto de volta quando nenhuma regra de rótulo casa</td></tr>
+      <tr><td><code>.ilu-form-compact__grid</code></td><td>onde o painel de política de senha é inserido em largura cheia</td></tr>
+      <tr><td><code>.ilu-form-compact__field</code></td><td>o "campo inteiro", para marcar como travado (sequence)</td></tr>
+      <tr><td><code>.ilu-form-field</code>, <code>.drawer-form-field</code>, <code>.form-group</code></td><td>wrapper procurado pelo <code>lock</code></td></tr>
+      <tr><td><code>.ilu-form-compact--steps</code></td><td>onde o stepper e a barra de progresso são inseridos</td></tr>
+      <tr><td><code>.crm-autocomplete-wrapper</code>, <code>.crm-autocomplete-value</code></td><td>componente de autocomplete do projeto de origem</td></tr>
+    </table>
+  </div>
+
+  <h2>Armadilhas confirmadas</h2>
+  <p>
+    Todas de falha <strong>silenciosa</strong>: a regra não dispara e nada aparece no
+    console. As marcadas com ⚙ só acontecem escrevendo HTML à mão — gerando do servidor,
+    o emissor as evita.
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>#</th><th>Sintoma</th><th>Causa</th><th>O que fazer</th></tr>
+      <tr><td>1 ⚙</td><td>a regra não faz nada</td><td>atributo no <code>&lt;input&gt;</code> em vez do wrapper</td><td>mover para o wrapper</td></tr>
+      <tr><td>2 ⚙</td><td>condição sobre checkbox nunca casa</td><td>checkbox sem <code>value</code> reporta <code>"on"</code> (padrão do HTML), não <code>"S"</code></td><td><code>'checked_value' =&gt; 'S'</code></td></tr>
+      <tr><td>3</td><td>lista de <strong>exatamente 2</strong> valores vira condição sempre falsa</td><td><code>['Uf' =&gt; ['SP','RJ']]</code> é indistinguível do par posicional <code>['op', valor]</code>, e o compilador decide pelo operador</td><td><code>['OR' =&gt; [['Uf'=&gt;'SP'], ['Uf'=&gt;'RJ']]]</code></td></tr>
+      <tr><td>4</td><td><code>label_when</code> em lista não troca o rótulo</td><td>lista sequencial vira <code>['AND' =&gt; …]</code> no normalizador; o plugin esperava array</td><td>emitir como JSON cru (o que <code>lib/form_builder.php</code> faz)</td></tr>
+      <tr><td>5</td><td>regra declarada some sem deixar rastro</td><td><code>empty([])</code> é verdadeiro em PHP; regra com array vazio é pulada</td><td>pôr qualquer chave dentro</td></tr>
+      <tr><td>6</td><td>metade da condição é ignorada</td><td>o runtime lê <strong>só a primeira chave</strong> do objeto</td><td>usar <code>AND</code> — ou a lista sequencial, que o compilador converte</td></tr>
+      <tr><td>7</td><td>comparação numérica sempre falsa</td><td>igualdade não converte tipo; o valor do campo é string</td><td><code>'1'</code> em vez de <code>1</code>, ou usar <code>&gt;</code>/<code>&lt;</code></td></tr>
+      <tr><td>8</td><td>condição sobre campo formatado sempre falsa</td><td><code>parseFloat("1.234,56")</code> devolve <code>1.234</code></td><td>manter uma cópia crua num hidden para comparar</td></tr>
+      <tr><td>9</td><td>a aba trava ao editar um campo</td><td>laço: o mesmo elemento tem uma regra que <em>escreve</em> num campo e outra que <em>lê</em> o mesmo campo</td><td>separar a cadeia em wrappers diferentes</td></tr>
+      <tr><td>10</td><td>o submit trava sem mostrar erro</td><td>campo <code>required</code> dentro de bloco oculto: o navegador não foca campo invisível</td><td>fazer <code>required_when</code> depender da mesma condição do <code>visible_when</code></td></tr>
+      <tr><td>11</td><td>dados de um ramo abandonado chegam ao servidor</td><td>esconder não desabilita, e campo oculto continua sendo serializado</td><td><code>'clear_on_hide' =&gt; true</code> ou <code>disabled_when</code></td></tr>
+      <tr><td>12</td><td>o valor travado não chega ao servidor</td><td><code>lock_when</code> aplica <code>disabled</code>, e campo desabilitado não é enviado</td><td>espelhar num <code>hidden</code></td></tr>
+      <tr><td>13</td><td><code>prevent_submit_when</code> não bloqueia nada</td><td>o guarda do núcleo só se instala se existir <code>window.sendForm</code></td><td>chamar <code>validateBeforeSubmit()</code> no seu handler</td></tr>
+      <tr><td>14</td><td><code>trigger_when</code> lança <code>TypeError</code></td><td><strong>bug</strong>: <code>findInput()</code> recebe o nome do campo (string) em vez de um elemento</td><td>usar a ação <code>trigger</code> do <code>fetch_when</code></td></tr>
+      <tr><td>15</td><td>combo com <code>fetch_when</code> + <code>event: 'load'</code> nunca carrega</td><td><code>skip_empty</code> (padrão <code>true</code>) aborta porque o valor do próprio campo está vazio</td><td>acrescentar <code>'skip_empty' =&gt; false</code></td></tr>
+      <tr><td>16</td><td>regras não valem em linhas novas</td><td>o mapa de dependências é montado no registro do plugin</td><td><code>engine.addElement()</code>, ou o plugin <code>repeater-init</code></td></tr>
+      <tr><td>17</td><td>uma requisição AJAX sai duas vezes</td><td>o mesmo elemento registrado duas vezes por <code>addElement()</code>, que não é idempotente</td><td>garantir um único registro por elemento</td></tr>
+      <tr><td>18</td><td>escolher no autocomplete/Select2 não reavalia nada</td><td>eles avisam com <code>$.trigger('change')</code>, que não aciona <code>addEventListener</code></td><td>já resolvido: o núcleo mantém uma ponte para o barramento do jQuery</td></tr>
+    </table>
+  </div>
+
+  <h2>Dependências por plugin</h2>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Precisam de jQuery</th><th>Não precisam de nada</th></tr>
+      <tr>
+        <td>
+          <code>fetch</code>, <code>copy</code>, <code>trigger</code>,
+          <code>remote-validate</code>, <code>mask</code>, <code>populate</code>,
+          <code>sequence</code>*, <code>behavior</code>, <code>submit-handler</code>,
+          <code>dynamic-table</code>, <code>revert</code>, <code>password</code>
+        </td>
+        <td>
+          <code>visible</code>, <code>required</code>, <code>disabled</code>,
+          <code>label</code>, <code>options</code>, <code>validate</code>,
+          <code>set-value</code>, <code>computed</code>, <code>lock</code>,
+          <code>action</code>, <code>confirm-submit</code>,
+          <code>prevent-submit</code>, <code>step</code>, <code>repeater-init</code>,
+          <code>base</code>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <p class="hint">
+    * <code>sequence</code> usa jQuery se houver (para ouvir mudanças programáticas de
+    Select2/autocomplete), mas funciona sem ele. <code>mask</code> precisa também do
+    <em>jQuery Mask Plugin</em>. <code>SweetAlert2</code> é opcional em
+    <code>sequence</code> e <code>dynamic-table</code>.
+  </p>
+
+<?php fre_pagina_fim(['sem_paineis' => true]); ?>

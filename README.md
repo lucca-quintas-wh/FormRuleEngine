@@ -47,9 +47,25 @@ Veja [ROADMAP.md](ROADMAP.md) para a ordem de trabalho proposta.
 
 ## Como usar hoje
 
-Há um exemplo funcional e sem dependência nenhuma em
-[`examples/basico.html`](examples/basico.html) — sirva a pasta por HTTP
-(`python3 -m http.server`) e abra.
+A documentação executável está em [`examples/`](examples/): uma página por
+assunto, todas rodando de verdade no navegador. Nenhum exemplo é HTML escrito à
+mão — cada um é uma **configuração PHP** compilada pelo
+[`FormRuleCompiler`](src/php/FormRuleCompiler.php), e a página mostra as três
+camadas lado a lado: a config, o HTML compilado, e o formulário funcionando.
+
+```bash
+php -S localhost:8000 -t .
+# http://localhost:8000/examples/
+```
+
+PHP 8.0+, sem Composer e sem banco: o backend dos exemplos é um único `api.php`
+com arrays em memória, e é ele que atende as demonstrações de `fetch_when`,
+`populate_when`, `remote_validate_when` e da política de senha.
+
+Comece pelo [índice](examples/), ou direto no
+[começo rápido](examples/?p=basico). A
+[referência completa](examples/?p=99-referencia) reúne todos os atributos,
+operadores, ações e armadilhas conhecidas em uma página.
 
 Carregue o núcleo, os plugins que você vai usar, e o bootstrap **por último**:
 
@@ -265,6 +281,14 @@ no runtime. Enquanto isso não muda, escreva:
 
 Está fixado nos testes como comportamento **conhecido**, não desejado, e é o
 primeiro item do roadmap. Varri o CRM de origem: nenhuma tela cai nela hoje.
+
+### `examples/views/form-builder.phtml` — um emissor autônomo
+
+O interpretador traduz as regras; alguém precisa emitir o markup em volta delas
+(grid, rótulo com `ilu-form-label`, `value` explícito no checkbox, o hidden com a
+config do wizard). Os exemplos trazem um emissor sem framework, curto o bastante
+para ler de ponta a ponta — é a resposta prática para *"como eu gero isso do meu
+backend?"*, e o que faz cada página de [`examples/`](examples/) funcionar.
 
 ### `reference/php/` — o resto, verbatim
 

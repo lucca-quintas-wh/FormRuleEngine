@@ -1,0 +1,147 @@
+<?php fre_pagina_inicio('01-visibilidade'); ?>
+
+  <h1><code>visible_when</code></h1>
+  <p class="lead">
+    Mostra ou esconde o elemento onde o atributo cai. É o único plugin que age no
+    próprio elemento em vez de procurar um input dentro dele — por isso funciona
+    tanto num campo quanto numa seção inteira.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <h2>1. O caso básico</h2>
+  <p>
+    A condição é reavaliada a cada mudança de qualquer campo citado nela. Abra a
+    config e repare em <code>'type' =&gt; 'group'</code>: ele <strong>propaga</strong> a
+    condição para cada campo filho, que é o que o gerador do projeto de origem faz.
+    No HTML compilado não existe wrapper de grupo — cada campo sai com o seu próprio
+    <code>data-visible-when</code>. É por isso que, num formulário real, você vê a
+    mesma condição repetida em campos vizinhos.
+  </p>
+
+  <?= fre_demo('01-basico', ['aberto' => true]) ?>
+
+  <h2>2. Modificadores</h2>
+  <p>
+    Três chaves ajustam <em>como</em> o elemento aparece e some. Elas não entram na
+    condição: viram atributos no dataset do próprio elemento.
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Config PHP</th><th>Atributo</th><th>Efeito</th></tr>
+      <tr>
+        <td><code>'animate' =&gt; false</code></td>
+        <td><code>data-animate="false"</code></td>
+        <td>Desliga o fade de 0,2 s ao aparecer. Útil em listas longas, onde N fades simultâneos pesam.</td>
+      </tr>
+      <tr>
+        <td><code>'keep_space' =&gt; true</code></td>
+        <td><code>data-keep-space="true"</code></td>
+        <td>Esconde com <code>visibility: hidden</code> em vez de <code>display: none</code>: o espaço continua ocupado e o layout não pula.</td>
+      </tr>
+      <tr>
+        <td><code>'clear_on_hide' =&gt; true</code></td>
+        <td><code>data-clear-on-hide="true"</code></td>
+        <td>Limpa todos os campos de dentro ao esconder, disparando <code>change</code> em cada um.</td>
+      </tr>
+    </table>
+  </div>
+
+  <?= fre_demo('01-modificadores') ?>
+
+  <h2>3. Condições compostas</h2>
+  <p>
+    A mesma gramática de todos os <code>*_when</code>. A
+    <a href="?p=03-dsl-condicoes">página 03</a> cobre a DSL inteira; aqui só o formato
+    e um detalhe do compilador que vale conhecer cedo.
+  </p>
+
+  <?= fre_demo('01-composta') ?>
+
+  <div class="warn">
+    <p>
+      <strong>Pertinência com exatamente dois valores não funciona.</strong>
+      <code>['Uf' =&gt; ['SP','RJ']]</code> é indistinguível, para o compilador, de um
+      par posicional <code>['operador', valor]</code> — e ele decide a favor do
+      operador, emitindo <code>{"Uf":{"sp":"RJ"}}</code>, que o runtime não conhece e
+      avalia como falso para sempre. Com um ou três valores funciona; falhar só em
+      dois é pior do que falhar sempre.
+    </p>
+    <pre><code>['Uf' =&gt; ['SP', 'RJ']]                        // ⚠ sempre falso
+['OR' =&gt; [['Uf' =&gt; 'SP'], ['Uf' =&gt; 'RJ']]]    // certo</code></pre>
+  </div>
+
+  <h2>4. Um campo, vários blocos</h2>
+  <p>
+    Não há limite nem ordem. A engine monta um mapa <em>campo → elementos que
+    dependem dele</em> no registro do plugin, e ao mudar um campo reavalia só esses
+    elementos — não há varredura do formulário a cada tecla.
+  </p>
+
+  <?= fre_demo('01-varios-blocos') ?>
+
+  <h2>5. Seções inteiras</h2>
+  <p>
+    Uma seção aceita <code>visible_when</code> igual a um campo, porque o plugin age
+    no próprio elemento. É a forma mais barata de esconder um bloco grande: uma regra
+    em vez de uma por campo.
+  </p>
+  <pre><code>'sections' =&gt; [
+    [
+        'title'        =&gt; 'Dados da empresa',
+        'visible_when' =&gt; ['TipoPessoa' =&gt; 'J'],
+        'fields'       =&gt; [ … ],
+    ],
+]</code></pre>
+
+  <h2>6. Elementos fora do formulário</h2>
+  <p>
+    O bootstrap adota elementos com <code>data-visible-when</code> que estão
+    <strong>fora</strong> do <code>&lt;form&gt;</code> — o caso real são painéis de um
+    drawer declarados pelo controller. A guarda importante: ele só adota o que não
+    pertence a outro formulário, senão dois formulários aninhados esconderiam as
+    seções um do outro.
+  </p>
+
+  <?= fre_demo_inline([
+        'name'      => 'formFora',
+        'sections'  => [[
+            'bare'   => true,
+            'fields' => [[
+                'name'    => 'MostrarPainel',
+                'label'   => 'Mostrar o painel externo?',
+                'type'    => 'select',
+                'col'     => 5,
+                'options' => ['N' => 'Não', 'S' => 'Sim'],
+            ]],
+        ]],
+        // Renderizado DEPOIS do </form>, e mesmo assim governado pela regra.
+        'after_form' => '<div data-visible-when=\'{"MostrarPainel":"S"}\''
+                      . ' data-demo-name="painel externo ao form"'
+                      . ' class="note" style="margin-top:16px">'
+                      . '<p>Este bloco está fora do <code>&lt;form&gt;</code> e mesmo assim '
+                      . 'reage ao campo acima.</p></div>',
+      ], 'A config — repare em after_form') ?>
+
+  <h2>7. Evento emitido</h2>
+  <p>
+    Toda vez que a visibilidade muda, o elemento dispara
+    <code>visibility:changed</code> (borbulhando), com <code>detail.visible</code>. O
+    painel de eventos no fim da página está escutando — é assim que o plugin
+    <code>step</code> descobre que uma etapa inteira sumiu.
+  </p>
+  <pre><code>form.addEventListener('visibility:changed', (e) =&gt; {
+  console.log(e.target, e.detail.visible);
+});</code></pre>
+
+  <div class="warn">
+    <p>
+      <strong>Esconder não remove do envio.</strong> <code>display:none</code> não
+      desabilita nada, e um campo oculto continua sendo serializado com o valor que
+      tinha. Se o ramo abandonado não pode chegar ao servidor, use
+      <code>'clear_on_hide' =&gt; true</code> — ou combine com
+      <code>disabled_when</code>, já que campo desabilitado não é enviado.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formVisibilidade']); ?>

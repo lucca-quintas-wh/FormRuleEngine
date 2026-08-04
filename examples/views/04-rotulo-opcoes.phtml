@@ -1,0 +1,77 @@
+<?php fre_pagina_inicio('04-rotulo-opcoes'); ?>
+
+  <h1><code>label_when</code> · <code>options_when</code></h1>
+  <p class="lead">
+    Dois plugins que trocam o <em>conteúdo</em> de um campo em vez do estado dele: o
+    texto do rótulo e o conjunto de <code>&lt;option&gt;</code>. Ambos usam um formato
+    de "lista de regras": a primeira que casar vence.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <h2>1. Rótulo condicional</h2>
+
+  <?= fre_demo('04-rotulo', ['aberto' => true]) ?>
+
+  <div class="note">
+    <p>
+      O plugin acha o rótulo com
+      <code>element.querySelector('.ilu-form-label')</code> — sem essa classe, nada
+      acontece. O emissor sempre a escreve, junto com
+      <code>data-label-default</code> a partir da chave <code>label</code>: é o texto
+      de volta quando nenhuma regra casa. Escrevendo o HTML à mão, os dois são fáceis
+      de esquecer.
+    </p>
+  </div>
+
+  <div class="warn">
+    <p>
+      <strong>Este é o único lugar da pasta onde o compilador é contornado.</strong>
+      <code>label_when</code> está na lista de condições puras do
+      <code>FormRuleCompiler</code>, mas o formato que o plugin espera é uma
+      <em>lista</em> — e lista sequencial vira <code>{"AND":[…]}</code> no
+      normalizador. O plugin então recebe um objeto onde esperava array, cai no ramo
+      de condição simples, e o rótulo nunca muda.
+    </p>
+    <p>
+      Enquanto isso não se decide no roadmap, <code>lib/form_builder.php</code> emite
+      a forma de lista como JSON cru. Abra "o HTML compilado" acima: o atributo saiu
+      como array, não como <code>AND</code>. Mesma família da armadilha da
+      pertinência com dois valores.
+    </p>
+  </div>
+
+  <h2>2. Rótulo com condição composta</h2>
+
+  <?= fre_demo('04-rotulo-composto') ?>
+
+  <h2>3. Opções dependentes de outro campo</h2>
+
+  <?= fre_demo('04-opcoes-depends') ?>
+
+  <h2>4. Opções por condição</h2>
+
+  <?= fre_demo('04-opcoes-condicoes') ?>
+
+  <h2>5. O que o plugin faz e o que ele não faz</h2>
+  <ul>
+    <li>Preserva o valor selecionado se ele ainda existir na lista nova; senão, cai na primeira opção.</li>
+    <li>Dispara <code>change</code> no select depois de reconstruir — então regras que dependem dele reavaliam sozinhas, e cascatas encadeiam.</li>
+    <li>Guarda as opções originais para restaurar; a "foto" é tirada na primeira avaliação, o que significa que opções injetadas por AJAX <em>depois</em> não entram nela.</li>
+    <li><strong>É estático:</strong> todo o conjunto de opções está no atributo HTML. Para opções vindas do banco, o plugin é o <code>fetch_when</code> com <code>map_options</code> — veja a <a href="?p=08-fetch-cascata">página 08</a>.</li>
+  </ul>
+
+  <div class="tip">
+    <p>
+      <strong>Qual usar?</strong> <code>options_when</code> para conjuntos pequenos e
+      conhecidos em tempo de renderização (subcategorias, regimes, motivos).
+      <code>fetch_when</code> + <code>map_options</code> quando a lista mora no banco
+      ou é grande demais para embutir no HTML.
+    </p>
+    <p>
+      Vale o cálculo: cada conjunto de opções vai por inteiro no atributo, e o
+      atributo vai em cada campo. Uma lista de 200 municípios repetida em cinco campos
+      é meio megabyte de HTML antes de o usuário tocar em nada.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formOpcoes']); ?>

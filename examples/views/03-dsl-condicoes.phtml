@@ -1,0 +1,263 @@
+<?php fre_pagina_inicio('03-dsl-condicoes'); ?>
+
+  <h1>A gramática das condições</h1>
+  <p class="lead">
+    Uma só gramática para <strong>todos</strong> os <code>*_when</code>. Aprendida uma
+    vez, vale para visibilidade, obrigatoriedade, máscara, AJAX, wizard — tudo. Ela
+    vive em <code>evaluateCondition()</code>, no núcleo, e tem menos de 40 linhas.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong></span>
+
+  <div class="note">
+    <p>
+      Esta página tem <strong>duas</strong> gramáticas em jogo, e vale separá-las
+      desde já:
+    </p>
+    <ul>
+      <li>a <strong>canônica</strong>, em JSON, que o runtime lê;</li>
+      <li>as formas <strong>idiomáticas em PHP</strong>, que o
+          <code>FormRuleCompiler</code> aceita e traduz para a canônica.</li>
+    </ul>
+    <p>
+      Escrevendo config PHP você usa a segunda; depurando no inspetor, vê a primeira.
+    </p>
+  </div>
+
+  <h2>1. As cinco formas canônicas</h2>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Forma (JSON)</th><th>Significado</th></tr>
+      <tr><td><code>{"Campo": "S"}</code></td><td>Igualdade. Comparação estrita (<code>===</code>) contra o valor cru do campo, que é sempre string.</td></tr>
+      <tr><td><code>{"Campo": ["A","B","C"]}</code></td><td>Pertence a. Verdadeiro se o valor do campo está na lista.</td></tr>
+      <tr><td><code>{"Campo": {"!=": "S"}}</code></td><td>Forma com operador. A chave é o operador; o valor é o operando.</td></tr>
+      <tr><td><code>{"AND": [ … ]}</code></td><td>Conjunção. Cada item é uma condição completa, e pode conter outro <code>AND</code>/<code>OR</code>.</td></tr>
+      <tr><td><code>{"OR": [ … ]}</code></td><td>Disjunção, aninhável do mesmo jeito.</td></tr>
+    </table>
+  </div>
+
+  <h2>2. O que você escreve em PHP</h2>
+  <p>
+    O compilador aceita cinco maneiras de dizer a mesma coisa, porque cada uma é
+    natural em um contexto diferente:
+  </p>
+  <pre><code>['Campo' =&gt; 'S']                                  // canônica
+['Campo' =&gt; ['&gt;' =&gt; 100]]                         // operador
+['Campo' =&gt; ['&gt;', 100]]                           // par posicional
+['Campo', '&gt;', 100]                               // tripla
+['field' =&gt; 'Campo', 'op' =&gt; '&gt;', 'value' =&gt; 100] // forma longa
+[ $cond1, $cond2 ]                                // lista → AND implícito</code></pre>
+  <p>
+    E normaliza os apelidos de operador que aparecem naturalmente:
+    <code>=</code>, <code>==</code>, <code>===</code> viram <code>eq</code>;
+    <code>&lt;&gt;</code>, <code>!==</code>, <code>neq</code>, <code>not_eq</code>
+    viram <code>!=</code>.
+  </p>
+  <p>
+    A <strong>lista → <code>AND</code> implícito</strong> é o detalhe mais útil: ela
+    evita que você escreva <code>['A'=&gt;'1','B'=&gt;'2']</code>, que o runtime
+    leria só pela primeira chave.
+  </p>
+
+  <h2>3. Operadores</h2>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Operador</th><th>Comparação</th><th>Exemplo em PHP</th></tr>
+      <tr><td><code>eq</code></td><td>igualdade estrita (idêntico à forma curta)</td><td><code>['Status' =&gt; ['eq' =&gt; 'A']]</code></td></tr>
+      <tr><td><code>!=</code></td><td>diferença estrita</td><td><code>['Status' =&gt; ['!=' =&gt; 'A']]</code></td></tr>
+      <tr><td><code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code></td><td>numérica, via <code>parseFloat</code> nos dois lados</td><td><code>['Idade' =&gt; ['&gt;=' =&gt; 18]]</code></td></tr>
+      <tr><td><code>regex</code></td><td><code>new RegExp(valor).test(campo)</code></td><td><code>['Email' =&gt; ['regex' =&gt; '@empresa\\.com$']]</code></td></tr>
+      <tr><td><code>eq_field</code></td><td>compara com <strong>outro campo</strong>; o operando é o <em>nome</em> dele</td><td><code>['Confirmacao' =&gt; ['eq_field' =&gt; 'Senha']]</code></td></tr>
+      <tr><td><code>neq_field</code></td><td>idem, negado</td><td><code>['Destino' =&gt; ['neq_field' =&gt; 'Origem']]</code></td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <p>
+      <code>eq_field</code>/<code>neq_field</code> são o que permite escrever
+      "confirmação igual à senha" ou "o tipo escolhido difere do já cotado" sem cair em
+      JavaScript solto. Sem eles, toda comparação entre dois campos vira função à mão.
+    </p>
+  </div>
+
+  <h2>4. As armadilhas</h2>
+
+  <div class="warn">
+    <p><strong>Só a primeira chave do objeto é lida.</strong></p>
+    <pre><code>{"A":"1","B":"2"}                // avalia SÓ {"A":"1"} — B é ignorado
+{"AND":[{"A":"1"},{"B":"2"}]}    // o que você queria</code></pre>
+    <p>
+      <code>evaluateCondition()</code> pega <code>Object.entries(rules)[0]</code> e
+      descarta o resto. Não é um AND implícito. Em PHP você quase não tropeça nisso,
+      porque a lista sequencial já vira <code>AND</code> no compilador.
+    </p>
+  </div>
+
+  <div class="warn">
+    <p><strong>Igualdade não converte tipo; comparadores numéricos convertem.</strong></p>
+    <pre><code>['Quantidade' =&gt; 1]          // FALSO: o campo vale "1" (string)
+['Quantidade' =&gt; '1']        // certo
+['Quantidade' =&gt; ['&gt;' =&gt; 0]]  // funciona com número: passa por parseFloat</code></pre>
+  </div>
+
+  <div class="warn">
+    <p><strong>Pertinência com exatamente dois valores é mal compilada.</strong></p>
+    <pre><code>['Uf' =&gt; ['SP', 'RJ']]        // → {"Uf":{"sp":"RJ"}} — operador inexistente, sempre falso
+['Uf' =&gt; ['SP','RJ','MG']]    // 3+ valores: funciona
+['OR' =&gt; [['Uf'=&gt;'SP'], ['Uf'=&gt;'RJ']]]   // a forma segura para dois</code></pre>
+    <p>
+      Uma lista de 2 elementos é indistinguível de um par posicional
+      <code>['operador', valor]</code>, e o compilador decide a favor do operador.
+      Falhar só em dois é pior do que falhar sempre — está no roadmap.
+    </p>
+  </div>
+
+  <h2>5. Como os campos são lidos</h2>
+  <p>
+    <code>getFieldValue()</code> normaliza por tipo de controle. Vale conhecer, porque
+    é contra isto que a condição compara:
+  </p>
+  <div class="table-scroll">
+    <table>
+      <tr><th>Controle</th><th>Valor lido</th></tr>
+      <tr><td>texto, select simples, textarea</td><td><code>value</code> (string)</td></tr>
+      <tr><td>checkbox</td><td>marcado ⇒ o <code>value</code> do campo; desmarcado ⇒ <code>"N"</code></td></tr>
+      <tr><td>radio</td><td>o <code>value</code> do que estiver marcado, ou <code>null</code></td></tr>
+      <tr><td><code>select multiple</code></td><td><strong>array</strong> de valores selecionados</td></tr>
+      <tr><td>campo inexistente</td><td><code>null</code></td></tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    <p>
+      <strong>Checkbox precisa de <code>value</code> explícito.</strong> O código é
+      <code>field.checked ? (field.value || 'S') : 'N'</code> — o <code>|| 'S'</code>
+      só entra quando o <code>value</code> é string vazia. Mas o HTML define
+      <code>"on"</code> como valor padrão de um checkbox sem <code>value</code>, então
+      o fallback nunca acontece e <code>{"Aceite":"S"}</code> fica sempre falso.
+    </p>
+    <p>
+      O emissor desta pasta escreve <code>value="S"</code> sempre (configurável por
+      <code>'checked_value'</code>), que é a razão de a armadilha não aparecer quando
+      o HTML vem do servidor.
+    </p>
+  </div>
+
+  <p>
+    A consequência prática do <code>select multiple</code>: comparar por igualdade
+    contra um array quase nunca dá certo. Para "selecionou o item X", o caminho hoje é
+    um campo auxiliar preenchido por <code>computed</code> ou <code>set_value</code>.
+  </p>
+
+  <h2>6. Parâmetros do formulário</h2>
+
+  <?= fre_demo('03-form-param') ?>
+
+  <h2>7. Laboratório</h2>
+  <p>
+    Mexa nos campos, escreva uma condição e veja o resultado em tempo real. É a mesma
+    <code>engine.evaluateCondition()</code> que os plugins chamam.
+  </p>
+
+  <?= fre_demo('03-laboratorio') ?>
+
+  <h2>8. Como as dependências são descobertas</h2>
+  <p>
+    No registro do plugin, a engine faz <code>JSON.parse</code> da regra e chama
+    <code>extractDependencies()</code>, que devolve os nomes de campo citados. Com isso
+    monta um <code>Map</code> de <em>campo → elementos que dependem dele</em>. No
+    <code>change</code>, só esses elementos são reavaliados.
+  </p>
+  <p>
+    O helper padrão desce por <code>AND</code>/<code>OR</code> e ignora chaves que não
+    são nome de campo — <code>label</code>, <code>mask</code>, <code>options</code>,
+    <code>rule</code>, <code>params</code>, <code>class</code>. É por isso que os
+    formatos "lista de regras com metadado" funcionam sem configuração extra.
+  </p>
+  <div class="warn">
+    <p>
+      Consequência: uma condição construída depois do registro <strong>não</strong>
+      entra no mapa. Elementos criados em runtime precisam de
+      <code>engine.addElement(el, 'visible')</code> — é exatamente o que o plugin
+      <code>repeater-init</code> faz para cada linha nova.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formLab', 'script' => <<<'JS'
+<script>
+(function () {
+  var engines = {};
+  document.addEventListener('form-rule-engine:ready', function (e) {
+    engines[e.target.getAttribute('name')] = e.detail.engine;
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    /* alternador do parâmetro de formulário */
+    var btn = document.getElementById('btnTrocaParam');
+    if (btn) btn.addEventListener('click', function () {
+      var campo = document.querySelector('[name="__form_param_origem"]');
+      campo.value = campo.value === 'interno' ? 'externo' : 'interno';
+      // Hidden não emite change sozinho. O núcleo reconhece o prefixo
+      // __form_param_ e reavalia TODAS as regras do formulário.
+      campo.dispatchEvent(new Event('change', { bubbles: true }));
+      Demo.log('__form_param_origem = "' + campo.value + '" → evaluateAll()');
+    });
+
+    /* laboratório */
+    var ta = document.getElementById('lab');
+    var saida = document.getElementById('labResultado');
+    var formLab = document.querySelector('form[name="formLab"]');
+    if (!ta) return;
+
+    function avaliar() {
+      var engine = engines['formLab'];
+      if (!engine) { saida.textContent = 'engine ainda não pronta…'; return; }
+      var texto = ta.value.trim();
+      if (!texto) { saida.textContent = ''; return; }
+      var regra;
+      try { regra = JSON.parse(texto); }
+      catch (err) {
+        saida.innerHTML = '<span style="color:var(--warn)">JSON inválido: ' +
+                          Demo.escapeHtml(err.message) + '</span>';
+        return;
+      }
+      var r;
+      try { r = engine.evaluateCondition(regra); }
+      catch (err) {
+        saida.innerHTML = '<span style="color:var(--err)">erro: ' +
+                          Demo.escapeHtml(err.message) + '</span>';
+        return;
+      }
+      saida.innerHTML = 'evaluateCondition(…) → <strong style="color:' +
+        (r ? 'var(--ok)' : 'var(--err)') + '">' + r + '</strong>';
+    }
+
+    ta.addEventListener('input', avaliar);
+    formLab.addEventListener('input', avaliar);
+    formLab.addEventListener('change', avaliar);
+
+    [['igualdade', '{"Status":"A"}'],
+     ['pertence a (3)', '{"Status":["A","P","X"]}'],
+     ['operador !=', '{"Status":{"!=":"I"}}'],
+     ['numérico', '{"Idade":{">=":18}}'],
+     ['string vs número', '{"Idade":20}'],
+     ['regex', '{"Email":{"regex":"@empresa\\\\.com$"}}'],
+     ['entre campos', '{"Confirmacao":{"eq_field":"Senha"}}'],
+     ['checkbox', '{"Aceite":"S"}'],
+     ['OR aninhado', '{"OR":[{"Status":"I"},{"AND":[{"Status":"P"},{"Idade":{"<":18}}]}]}'],
+     ['⚠ 2ª chave ignorada', '{"Status":"I","Idade":{">":99}}']
+    ].forEach(function (par) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'secondary small';
+      b.textContent = par[0];
+      b.addEventListener('click', function () { ta.value = par[1]; avaliar(); });
+      document.getElementById('labExemplos').appendChild(b);
+    });
+
+    setTimeout(avaliar, 0);
+  });
+})();
+</script>
+JS
+]); ?>

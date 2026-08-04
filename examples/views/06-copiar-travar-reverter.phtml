@@ -1,0 +1,122 @@
+<?php fre_pagina_inicio('06-copiar-travar-reverter'); ?>
+
+  <h1><code>copy_when</code> · <code>lock_when</code> · <code>revert_when</code></h1>
+  <p class="lead">
+    Três respostas diferentes para a mesma pergunta — "este valor não pode ser esse" —
+    e a diferença entre elas é <em>quando</em> a regra age.
+  </p>
+  <span class="deps">Dependências: <strong>jQuery</strong> (copy e revert) · lock não precisa</span>
+
+  <div class="note">
+    <p><strong>Qual usar.</strong></p>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Regra</th><th>Momento</th><th>Experiência</th></tr>
+        <tr><td><code>disabled_when</code></td><td>antes</td><td>não deixa escolher</td></tr>
+        <tr><td><code>lock_when</code></td><td>antes</td><td>escolhe por você e tranca</td></tr>
+        <tr><td><code>revert_when</code></td><td>na hora</td><td>deixa escolher, julga e desfaz, com mensagem</td></tr>
+        <tr><td><code>prevent_submit_when</code></td><td>no fim</td><td>deixa tudo acontecer e barra no envio</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>1. Copiar o valor de outro campo</h2>
+
+  <?= fre_demo('06-copiar', ['aberto' => true]) ?>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Padrão</th><th>Descrição</th></tr>
+      <tr><td><code>source</code></td><td>—</td><td><strong>Obrigatória.</strong> Nome do campo de origem.</td></tr>
+      <tr><td><code>condition</code></td><td>sempre</td><td>Quando copiar.</td></tr>
+      <tr><td><code>event</code></td><td><code>change</code></td><td>Eventos do campo de destino a observar (separados por espaço).</td></tr>
+      <tr><td><code>clear_on_unlock</code></td><td><code>true</code></td><td>Ao deixar de valer, restaura o valor original do destino.</td></tr>
+    </table>
+  </div>
+
+  <h2>2. Travar com valor fixo</h2>
+  <p>
+    <code>lock_when</code> nomeia o <code>target</code> e o <code>value</code>. Enquanto
+    a condição vale: guarda o valor anterior, escreve o fixo, e põe
+    <code>readonly</code> <em>e</em> <code>disabled</code> no campo, mais a classe
+    <code>form-rule-locked</code> no wrapper. Quando deixa de valer, restaura.
+  </p>
+
+  <?= fre_demo('06-travar') ?>
+
+  <div class="warn">
+    <p>
+      <strong>Campo travado não é enviado.</strong> O plugin põe <code>disabled</code>,
+      e o navegador não serializa campo desabilitado. Se o valor travado precisa chegar
+      ao servidor, mantenha um <code>hidden</code> espelhando-o — por
+      <code>set_value_when</code>, por exemplo.
+    </p>
+  </div>
+
+  <h2>3. Reverter uma escolha</h2>
+  <p>
+    A regra do tipo <em>"já existe X aqui, exclua antes de trocar"</em>. No exemplo:
+    depois de adicionar itens a uma cotação, trocar o tipo de plano é recusado.
+  </p>
+
+  <?= fre_demo('06-reverter') ?>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Descrição</th></tr>
+      <tr><td><code>condition</code></td><td>Quando a escolha deve ser recusada.</td></tr>
+      <tr><td><code>message_map</code></td><td>Mensagem por <em>valor escolhido</em>. Cai em <code>message</code> se não houver entrada.</td></tr>
+      <tr><td><code>message</code></td><td>Mensagem única, quando não há mapa.</td></tr>
+      <tr><td><code>type</code></td><td>Tipo da mensagem (<code>error</code> por padrão).</td></tr>
+      <tr><td><code>restore_from</code></td><td>Campo de onde vem o valor restaurado. Sem ele, usa o valor anterior do próprio campo.</td></tr>
+      <tr><td><code>remember_in</code></td><td>Quando a escolha é <strong>aceita</strong>, grava-a neste campo (sem disparar <code>change</code>).</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <p><strong>Duas decisões de projeto que valem entender.</strong></p>
+    <p>
+      1. <code>extractDependencies()</code> devolve lista <strong>vazia</strong> de
+      propósito: a regra julga o <em>ato de escolher este campo</em>, não o estado do
+      formulário. Se fosse reavaliada quando terceiros mudam, reverteria um valor que
+      ninguém acabou de tocar.
+    </p>
+    <p>
+      2. Ela só julga eventos com <code>originalEvent</code> — isto é, ação humana. Uma
+      cascata que repopula o combo dispara <code>change</code> programático com valor
+      vazio, e reverter aí seria brigar com a cascata. A reversão em si também
+      <strong>não</strong> dispara <code>change</code>, para não cascatear a partir de
+      um valor que o usuário acabou de ter recusado.
+    </p>
+  </div>
+
+  <div class="tip">
+    <p>
+      <strong>Mensagens.</strong> A engine chama <code>showMessage(tipo, texto)</code>,
+      que procura, nesta ordem, as globais <code>communicate</code>,
+      <code>alerta</code> e <code>message</code> — e cai em <code>console.error</code>
+      se nenhuma existir. Definir <em>uma</em> delas é toda a integração com o seu
+      sistema de notificação. Estas páginas definem <code>communicate</code>.
+    </p>
+  </div>
+
+<?php fre_pagina_fim(['form_estado' => 'formReverter', 'script' => <<<'JS'
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var itens = document.querySelector('[name="itens"]');
+  var contador = document.getElementById('contadorItens');
+  function pinta() { contador.textContent = 'itens na cotação: ' + itens.value; }
+
+  document.getElementById('btnAddItem').addEventListener('click', function () {
+    itens.value = String(Number(itens.value) + 1); pinta();
+    Demo.log('itens = ' + itens.value);
+  });
+  document.getElementById('btnZerarItens').addEventListener('click', function () {
+    itens.value = '0'; pinta();
+    Demo.log('itens = 0');
+  });
+  pinta();
+});
+</script>
+JS
+]); ?>

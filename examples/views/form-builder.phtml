@@ -1,0 +1,138 @@
+<?php
+/**
+ * form-builder.phtml — o template que compila a configuração declarativa em HTML.
+ *
+ * Recebe:
+ *   $config  array  ver examples/demos/*.php
+ *
+ * Análogo autônomo de reference/php/form-builder.phtml. A diferença é só de
+ * dependências: aqui não há SField, FormRenderer nem framework — o objetivo é
+ * que você consiga ler de ponta a ponta o caminho "config PHP → atributo HTML".
+ *
+ * @var array $config
+ */
+
+$formName   = $config['name'] ?? 'form1';
+$temSteps   = !empty($config['step_config']);
+$temRegras  = true; // este builder só existe para formulários com regras
+
+// data-behavior-when e data-submit-handler-when moram no <form>, não no campo.
+$attrsForm = [
+    'name'                 => $formName,
+    'id'                   => $formName,
+    'action'               => $config['action'] ?? '#',
+    'method'               => $config['method'] ?? 'post',
+    'data-form-visibility' => 'true',
+];
+if (!empty($config['behaviors'])) {
+    $attrsForm['data-behavior-when'] = fre_json($config['behaviors']);
+}
+if (!empty($config['submit_handler'])) {
+    // O runtime procura `data-<plugin>-when`; o plugin chama-se `submit-handler`.
+    $attrsForm['data-submit-handler-when'] = fre_json($config['submit_handler']);
+}
+?>
+<form<?= fre_attrs($attrsForm) ?>>
+
+<?php /* ── parâmetros do formulário ──────────────────────────────────────────
+       Viram hidden com o prefixo `__form_param_`. Nas condições você os cita
+       como `form_param_<nome>`; o núcleo tenta primeiro o nome exato e depois
+       a versão com os dois underscores. Mudar um deles reavalia TODAS as
+       regras do formulário, não só as dependentes.                         */ ?>
+<?php foreach (($config['params'] ?? []) as $chave => $valor): ?>
+  <input type="hidden" name="__form_param_<?= fre_e($chave) ?>" value="<?= fre_e($valor) ?>">
+<?php endforeach; ?>
+
+<?php /* ── configuração do wizard ───────────────────────────────────────────
+       O plugin `step` lê o VALUE destes campos (não o atributo).           */ ?>
+<?php if ($temSteps): ?>
+  <input type="hidden" data-step-config value="<?= fre_e(fre_json($config['step_config'])) ?>">
+  <input type="hidden" data-step-rules  value="<?= fre_e(fre_json($config['step_config']['skip'] ?? [])) ?>">
+<?php endif; ?>
+
+<?php /* ── configuração da liberação sequencial ─────────────────────────────
+       Aqui é o contrário: o plugin `sequence` lê o ATRIBUTO.               */ ?>
+<?php if (!empty($config['sequence_config'])): ?>
+  <input type="hidden" data-sequence-config="<?= fre_e(fre_json($config['sequence_config'])) ?>">
+<?php endif; ?>
+
+<?= $config['before_sections'] ?? '' ?>
+
+<div class="<?= $temSteps ? 'ilu-form-compact ilu-form-compact--steps' : 'ilu-form-compact' ?>">
+
+<?php foreach (($config['sections'] ?? []) as $section): ?>
+  <?php
+    // A seção carrega o mesmo `data-visible-when` de um campo: o plugin `visible`
+    // age no próprio elemento, então esconder uma seção inteira é a mesma regra.
+    $attrsSecao = ['class' => empty($section['bare']) ? 'ilu-form-section' : 'ilu-form-section ilu-form-section--nua'];
+    if (!empty($section['visible_when'])) {
+        $attrsSecao['data-visible-when'] = FormRuleCompiler::encode($section['visible_when']);
+    }
+    if (isset($section['step'])) {
+        $attrsSecao['data-step'] = (string) $section['step'];
+    }
+    if (!empty($section['id'])) {
+        $attrsSecao['id'] = $section['id'];
+    }
+  ?>
+  <section<?= fre_attrs($attrsSecao) ?>>
+    <?php if (!empty($section['title'])): ?>
+      <h3 class="ilu-form-section__title"><?= fre_e($section['title']) ?></h3>
+    <?php endif; ?>
+    <?php if (!empty($section['description'])): ?>
+      <p class="hint" style="margin-bottom:14px"><?= $section['description'] ?></p>
+    <?php endif; ?>
+
+    <div class="ilu-form-compact__grid">
+      <?php foreach (($section['fields'] ?? []) as $field): ?>
+        <?= fre_render_field($field) ?>
+      <?php endforeach; ?>
+    </div>
+  </section>
+<?php endforeach; ?>
+
+</div>
+
+<?php /* ── botões ───────────────────────────────────────────────────────────
+       `visible_when` e `enabled_when` de BOTÃO não são dois atributos: são
+       duas chaves dentro do mesmo `data-action-when`, porque quem cuida deles
+       é o plugin `action`.                                                 */ ?>
+<?php if (!empty($config['buttons'])): ?>
+  <div class="ilu-form-actions">
+    <?php foreach ($config['buttons'] as $button): ?>
+      <?php
+        $regrasAcao = [];
+        if (!empty($button['visible_when'])) {
+            $regrasAcao['visible_when'] = FormRuleCompiler::normalize($button['visible_when']);
+        }
+        if (!empty($button['enabled_when'])) {
+            $regrasAcao['enabled_when'] = FormRuleCompiler::normalize($button['enabled_when']);
+        }
+
+        $attrsBotao = [
+            'type'    => $button['type'] ?? 'button',
+            'class'   => $button['class'] ?? 'secondary',
+            'id'      => $button['id'] ?? null,
+            'onclick' => $button['onclick'] ?? null,
+        ];
+        if ($regrasAcao !== []) {
+            $attrsBotao['data-action-when'] = fre_json($regrasAcao);
+        }
+        if (!empty($button['confirm_submit'])) {
+            $attrsBotao['data-confirm-submit-when'] = fre_json($button['confirm_submit']);
+        }
+        if (!empty($button['step_role'])) {
+            // Bring-your-own-nav: o plugin `step` ADOTA controles já existentes
+            // marcados com data-step-prev / data-step-next / data-step-submit,
+            // em vez de criar a própria barra de navegação.
+            $attrsBotao['data-step-' . $button['step_role']] = true;
+            $attrsBotao['data-step-for'] = $formName;
+        }
+      ?>
+      <button<?= fre_attrs($attrsBotao) ?>><?= fre_e($button['label'] ?? 'Enviar') ?></button>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+</form>
+<?= $config['after_form'] ?? '' ?>

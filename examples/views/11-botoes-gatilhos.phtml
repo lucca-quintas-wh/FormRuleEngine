@@ -1,0 +1,116 @@
+<?php fre_pagina_inicio('11-botoes-gatilhos'); ?>
+
+  <h1><code>action_when</code> · <code>trigger_when</code></h1>
+  <p class="lead">
+    Dois plugins pequenos: um controla botões, o outro dispara eventos em outros
+    campos. O segundo tem um defeito confirmado — está documentado abaixo, com o
+    conserto.
+  </p>
+  <span class="deps">Dependências: <strong>nenhuma</strong> (action) · <strong>jQuery</strong> (trigger)</span>
+
+  <h2>1. Botões condicionais</h2>
+
+  <?= fre_demo('11-botoes', ['aberto' => true]) ?>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Efeito quando falso</th></tr>
+      <tr><td><code>visible_when</code></td><td><code>display: none</code> + classe <code>form-rule-hidden</code>.</td></tr>
+      <tr><td><code>enabled_when</code></td><td>atributo <code>disabled</code> + classe <code>disabled</code>.</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <p>
+      As duas chaves são independentes: um botão pode estar visível e desabilitado —
+      o usuário vê que a ação existe, mas não pode executá-la agora. Costuma ser
+      melhor UX do que fazer o botão sumir sem explicação.
+    </p>
+  </div>
+
+  <h2>2. Disparar eventos em outros campos</h2>
+  <p>
+    <code>trigger_when</code> observa um campo e, quando a condição vale, dispara um
+    evento em <strong>outros</strong> campos. Serve para acordar um
+    <code>fetch_when</code> vizinho depois que um valor é escrito por código —
+    situação em que o <code>change</code> natural não acontece.
+  </p>
+
+  <pre><code>'trigger_when' =&gt; [[
+    'condition' =&gt; ['Cep' =&gt; ['regex' =&gt; '^\d{5}-?\d{3}$']],
+    'fire' =&gt; [
+        ['field' =&gt; 'Municipio', 'event' =&gt; 'change'],
+        ['field' =&gt; 'Bairro',    'event' =&gt; 'change', 'delay' =&gt; 50],
+    ],
+]]</code></pre>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Chave</th><th>Descrição</th></tr>
+      <tr><td><code>condition</code></td><td>Opcional. Sem ela, dispara sempre que o campo muda.</td></tr>
+      <tr><td><code>fire</code></td><td>Lista de alvos: <code>['field' =&gt; …, 'event' =&gt; …, 'delay' =&gt; …]</code> — ou só a string com o nome do campo.</td></tr>
+      <tr><td><code>event</code></td><td>Padrão <code>change</code>.</td></tr>
+      <tr><td><code>delay</code></td><td>Milissegundos antes de disparar. Útil quando o alvo ainda está sendo repopulado.</td></tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    <p><strong>Este plugin não funciona na versão atual.</strong></p>
+    <p>
+      Em <code>src/plugins/form-rule-trigger.js:49</code>, o alvo é resolvido com
+      <code>this.findInput(targetField)</code> — mas <code>targetField</code> é uma
+      <em>string</em> (o nome do campo), e <code>findInput()</code> espera um elemento
+      do DOM, porque só faz <code>element.querySelector(…)</code>. O resultado é
+      <code>TypeError: element.querySelector is not a function</code> dentro do handler
+      de <code>change</code>, e o evento nunca chega ao alvo.
+    </p>
+    <p>
+      Verificado em jsdom com um formulário mínimo: a exceção sobe e o campo alvo
+      recebe zero eventos. Por isso não há demonstração ao vivo nesta seção — não
+      faria sentido mostrar algo que só produz erro no console.
+    </p>
+    <p><strong>O conserto</strong> é trocar a linha por uma busca por nome:</p>
+    <pre><code>// antes
+const el = this.findInput(targetField);
+
+// depois
+const el = this.engine.form.querySelector(`[name="${targetField}"]`);</code></pre>
+    <p>
+      Enquanto isso não entra, o mesmo efeito se obtém com a ação <code>trigger</code>
+      dentro de <code>on_success</code> de um <code>fetch_when</code>, ou com
+      <code>chain</code> do <code>populate_when</code> — os dois caminhos disparam o
+      evento pelo nome do campo e estão exercitados nas páginas
+      <a href="?p=08-fetch-cascata">08</a> e <a href="?p=09-populate">09</a>.
+    </p>
+  </div>
+
+  <h2>3. As ações disponíveis</h2>
+  <p>
+    Vale para <code>on_success</code>, <code>on_fail</code>, <code>on_empty</code>,
+    <code>action</code> do <code>confirm_submit</code> e para o
+    <code>then</code>/<code>else</code> de um <code>conditional</code>. Todas passam
+    por <code>runActions()</code>, no núcleo.
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <tr><th>Ação</th><th>Forma</th><th>Efeito</th></tr>
+      <tr><td><code>set_value</code></td><td><code>['Campo' =&gt; 'template']</code></td><td>Grava valores. O template resolve <code>{Campo}</code>, <code>{value}</code> e <code>{response.…}</code>.</td></tr>
+      <tr><td><code>set_options</code></td><td><code>['Campo' =&gt; [path, value_key, label_key, include_empty, value]]</code></td><td>Repopula um select a partir da resposta.</td></tr>
+      <tr><td><code>set_html</code></td><td><code>['seletor' =&gt; 'template']</code></td><td>Escreve HTML nos elementos que casarem, dentro do formulário.</td></tr>
+      <tr><td><code>toggle</code></td><td><code>[selector, show]</code></td><td>Mostra/esconde por seletor CSS.</td></tr>
+      <tr><td><code>toggle_by_response</code></td><td><code>[selector, path, equals|gt|gte|neq]</code></td><td>Mostra/esconde comparando um caminho da resposta.</td></tr>
+      <tr><td><code>message_by_response</code></td><td><code>[path, equals, message|message_path, type]</code></td><td>Mensagem condicionada ao conteúdo da resposta.</td></tr>
+      <tr><td><code>show_message</code></td><td><code>[type, message]</code></td><td>Mensagem direta.</td></tr>
+      <tr><td><code>clear</code></td><td><code>'Campo'</code> ou lista</td><td>Limpa campos.</td></tr>
+      <tr><td><code>trigger</code></td><td><code>'Campo'</code></td><td>Dispara <code>change</code> no campo — a alternativa funcional ao <code>trigger_when</code>.</td></tr>
+      <tr><td><code>call</code></td><td><code>['call' =&gt; 'fn', 'args' =&gt; [...]]</code></td><td>Chama <code>window.fn(...)</code>, se existir. Os args passam pelo template.</td></tr>
+      <tr><td><code>conditional</code></td><td><code>[condition, then, else]</code></td><td>Ramifica usando a DSL. Aninhável.</td></tr>
+    </table>
+  </div>
+
+  <h2>4. Ações ao vivo</h2>
+
+  <?= fre_demo('11-acoes') ?>
+
+<?php fre_pagina_fim(['form_estado' => 'formAcoesBotao']); ?>

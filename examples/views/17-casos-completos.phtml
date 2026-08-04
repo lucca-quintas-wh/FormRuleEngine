@@ -1,0 +1,109 @@
+<?php
+fre_pagina_inicio('17-casos-completos');
+
+$casos = [
+    'cadastro' => ['titulo' => 'Cadastro de cliente',
+                   'resumo' => 'As regras de campo que não precisam de servidor, num formulário de verdade.',
+                   'attrs'  => 'visible · required · disabled · label · options · mask · computed · copy · action · confirm'],
+    'endereco' => ['titulo' => 'Endereço e empresa',
+                   'resumo' => 'Busca por CEP, cascata de três níveis, preenchimento em massa e validação remota.',
+                   'attrs'  => 'fetch · populate · remote-validate'],
+    'cotacao'  => ['titulo' => 'Cotação guiada',
+                   'resumo' => 'Fila de preenchimento, campo travado sob condição e escolha revertida na hora.',
+                   'attrs'  => 'sequence · lock · revert · computed(age)'],
+    'wizard'   => ['titulo' => 'Cadastro em etapas',
+                   'resumo' => 'Seções viram etapas, com validação por etapa, pulo condicional e política de senha.',
+                   'attrs'  => 'step · password'],
+];
+
+$caso = $_GET['caso'] ?? 'cadastro';
+if (!isset($casos[$caso])) { $caso = 'cadastro'; }
+$meta = $casos[$caso];
+?>
+
+  <h1>Casos completos</h1>
+  <p class="lead">
+    As páginas anteriores isolam uma regra por vez. Aqui estão quatro formulários
+    <strong>inteiros</strong>, do tamanho e da forma que sairiam de um controller de
+    verdade — com as regras se cruzando, que é onde as interações interessantes
+    aparecem.
+  </p>
+
+  <div class="cards">
+    <?php foreach ($casos as $chave => $info): ?>
+      <a class="card" href="?p=17-casos-completos&amp;caso=<?= urlencode($chave) ?>"
+         <?= $chave === $caso ? 'style="box-shadow: inset 0 -4px 9px #9ccbe4, var(--clay-out-lg); transform: translateY(-3px)"' : '' ?>>
+        <span class="n"><?= fre_e(strtoupper($chave)) ?></span>
+        <span class="t"><?= fre_e($info['titulo']) ?></span>
+        <span class="d"><?= fre_e($info['resumo']) ?></span>
+        <span class="attrs"><?= fre_e($info['attrs']) ?></span>
+      </a>
+    <?php endforeach; ?>
+  </div>
+
+  <h2><?= fre_e($meta['titulo']) ?></h2>
+
+  <?= fre_demo('caso-' . $caso) ?>
+
+  <h2>O que chegou no servidor</h2>
+  <p>
+    O envio é interceptado e mandado para <code>api.php?acao=salvar</code>, que devolve
+    o <code>$_POST</code> recebido. Vale conferir o que <strong>não</strong> aparece:
+    campo desabilitado por <code>disabled_when</code> ou trancado por
+    <code>lock_when</code> não é serializado pelo navegador.
+  </p>
+  <pre id="respostaServidor">— envie o formulário para ver a resposta —</pre>
+
+  <div class="note">
+    <p>
+      <strong>Sobre o <code>prevent_submit_when</code>.</strong> O guarda de envio do
+      núcleo só se instala quando existe uma função global <code>sendForm</code> — a do
+      CRM de origem. Sem ela, o plugin registra as regras e ninguém as consulta. Em
+      código novo, o gancho é chamar
+      <code>plugin.validateBeforeSubmit(nomeDoForm)</code> no seu handler de submit,
+      que é o que o script desta página faz.
+    </p>
+  </div>
+
+<?php
+$nomeForm = ['cadastro' => 'formCadastro', 'endereco' => 'formEndereco',
+             'cotacao'  => 'formCotacao',  'wizard'   => 'formWizard'][$caso];
+
+fre_pagina_fim(['form_estado' => $nomeForm, 'script' => <<<JS
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.querySelector('form[name="{$nomeForm}"]');
+  var engine = window.__formRuleEnginesByName['{$nomeForm}'];
+  var saida = document.getElementById('respostaServidor');
+  if (!form || !engine) return;
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var prevent = engine.plugins.get('prevent-submit');
+    if (prevent) {
+      var r = prevent.validateBeforeSubmit(form.getAttribute('name'));
+      if (!r.valid) { engine.showMessage('error', r.message); return; }
+    }
+    if (engine.hasRemoteValidationErrors()) {
+      engine.showMessage('error', Array.from(engine.remoteValidations.values())[0]);
+      return;
+    }
+
+    saida.textContent = 'enviando…';
+    fetch('api.php?acao=salvar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form)).toString()
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        saida.textContent = JSON.stringify(json, null, 2);
+        Demo.toast('Formulário enviado.', 'info');
+      })
+      .catch(function (err) { saida.textContent = 'falha: ' + err; });
+  });
+});
+</script>
+JS
+]);
