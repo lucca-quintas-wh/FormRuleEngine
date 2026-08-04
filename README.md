@@ -2,26 +2,61 @@
 
 Motor declarativo de comportamento de formulário para projetos legados.
 
-Você descreve o comportamento como **atributos HTML**; a engine executa no browser.
-Nada de escrever JS de formulário à mão para mostrar/esconder campo, tornar
-obrigatório, mascarar, calcular, cascatear combo ou validar no servidor.
+Você descreve o formulário **e o comportamento dele** como configuração. Nada de
+escrever JS de formulário à mão para mostrar/esconder campo, tornar obrigatório,
+mascarar, calcular, cascatear combo ou validar no servidor — e, se você usa PHP,
+nada de escrever o HTML dos campos também.
+
+## Em PHP: configure o array, receba o formulário
+
+```php
+echo FormRenderer::renderForm([
+    'name'     => 'frmCliente',
+    'sections' => [[
+        'title'  => 'Identificação',
+        'fields' => [
+            ['name' => 'TipoPessoa', 'label' => 'Tipo', 'type' => 'select', 'col' => 4,
+             'options' => ['F' => 'Física', 'J' => 'Jurídica']],
+
+            ['name' => 'Cpf', 'label' => 'CPF', 'col' => 4,
+             'visible_when' => ['TipoPessoa' => 'F'],
+             'mask_when'    => ['mask' => '000.000.000-00']],
+
+            ['name' => 'Cnpj', 'label' => 'CNPJ', 'col' => 4,
+             'visible_when'  => ['TipoPessoa' => 'J'],
+             'required_when' => ['TipoPessoa' => 'J']],
+        ],
+    ]],
+    'buttons' => [['label' => 'Salvar', 'type' => 'submit', 'class' => 'primary']],
+]);
+
+echo FormRenderer::renderScripts($config);   // carrega só os plugins que a config usa
+```
+
+Sai o formulário inteiro — seções, grid de 12 colunas, rótulos, controles — com as
+regras já penduradas no lugar certo. **Zero linha de JavaScript e zero linha de HTML.**
+
+## Em qualquer outra stack: gere os atributos
+
+O gerador PHP é conveniência. O que a engine realmente consome são atributos HTML,
+então qualquer backend serve — Django, Rails, ASP.NET, JSP ou string concatenada:
 
 ```html
 <form data-form-visibility="true">
   <input name="TipoPessoa" value="F">
 
   <div data-visible-when='{"TipoPessoa":"F"}'>
+    <label>CPF</label>
     <input name="Cpf" data-mask-when='{"mask":"000.000.000-00"}'>
   </div>
 
-  <div data-visible-when='{"TipoPessoa":"J"}'>
-    <input name="Cnpj" data-required-when='{"TipoPessoa":"J"}'>
+  <!-- a regra vai no WRAPPER, nunca no <input> — ver "Armadilha do wrapper" -->
+  <div data-visible-when='{"TipoPessoa":"J"}' data-required-when='{"TipoPessoa":"J"}'>
+    <label>CNPJ</label>
+    <input name="Cnpj">
   </div>
 </form>
 ```
-
-Sem uma linha de JavaScript. O backend só precisa saber gerar atributo HTML —
-PHP, Django, Rails, ASP.NET, JSP ou string concatenada, tanto faz.
 
 ---
 
@@ -35,8 +70,9 @@ O que isso significa na prática, e que ainda **não** está resolvido:
 
 - **Não há build, nem pacote npm, nem pacote Composer.** São scripts carregados
   por `<script src>` e uma classe PHP para `require`.
-- **Há três testes** (`npm test`) — smoke do runtime, paridade do interpretador
-  PHP contra o trait de origem, e um cruzado PHP→JS. Cobertura por plugin é o
+- **Há quatro testes** (`npm test`): smoke do runtime, paridade do interpretador
+  contra o trait de origem, um cruzado PHP→JS da DSL, e um ponta a ponta que sai
+  de uma config, gera o formulário e o exercita no DOM. Cobertura por plugin é o
   item 1 do roadmap.
 - **5 dos 27 plugins ainda dependem do host original** (ver "Fronteira do host").
 - **Mensagens de erro estão em português**, embutidas no código.
@@ -226,6 +262,31 @@ em vez de mantê-lo forkado.
 ---
 
 ## O lado do servidor
+
+São duas peças, com responsabilidades separadas: o **gerador** emite markup, o
+**interpretador** traduz as regras. Dá para usar o interpretador sozinho, se você
+já tem o seu próprio gerador de formulários e só quer as regras.
+
+### `src/php/FormRenderer.php` — o gerador
+
+`renderForm($config)` devolve o formulário completo. `renderScripts($config)`
+devolve as `<script>` na ordem obrigatória, **só dos plugins que a config usa** —
+formulário sem máscara não baixa o plugin de máscara.
+
+A estrutura da config: `sections[] → fields[]`, cada campo com `name`, `label`,
+`type`, `col` (grid de 12) e as chaves de regra (`visible_when`, `required_when`,
+…). Tipos de campo: `text`, `number`, `date`, `email`, `password`, `tel`,
+`select`, `textarea`, `checkbox`, `radio`, `hidden`, `static`, `raw` (HTML cru
+dentro da grid) e `group` (propaga a condição para os filhos).
+
+O template do formulário fica separado da lógica em
+[`src/php/templates/form.phtml`](src/php/templates/form.phtml) — trocar a marcação
+(outro framework de CSS, outra estrutura de seção) é editar esse arquivo, sem
+tocar em regra nenhuma.
+
+**Por que usar o gerador em vez de montar o HTML:** ele acerta sozinho as duas
+armadilhas documentadas abaixo — põe o atributo de regra no wrapper, e emite
+`value` explícito em checkbox. As duas falham em silêncio quando feitas à mão.
 
 ### `src/php/FormRuleCompiler.php` — o interpretador
 

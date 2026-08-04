@@ -1,13 +1,16 @@
 <?php
 /**
- * form-builder.phtml — o template que compila a configuração declarativa em HTML.
+ * form.phtml — o template do formulário: estrutura, seções, grid e botões.
+ *
+ * Incluído por FormRenderer::renderForm(); cada campo sai de FormRenderer::field().
+ * Está separado da classe de propósito — trocar a marcação (outro framework de
+ * CSS, outra estrutura de seção) é editar este arquivo, sem tocar na lógica de regra.
  *
  * Recebe:
- *   $config  array  ver examples/demos/*.php
+ *   $config  array  a mesma configuração passada a renderForm()
  *
- * Análogo autônomo de reference/php/form-builder.phtml. A diferença é só de
- * dependências: aqui não há SField, FormRenderer nem framework — o objetivo é
- * que você consiga ler de ponta a ponta o caminho "config PHP → atributo HTML".
+ * Análogo autônomo de reference/php/form-builder.phtml, sem SField nem framework:
+ * dá para ler de ponta a ponta o caminho "config PHP → atributo HTML".
  *
  * @var array $config
  */
@@ -25,14 +28,14 @@ $attrsForm = [
     'data-form-visibility' => 'true',
 ];
 if (!empty($config['behaviors'])) {
-    $attrsForm['data-behavior-when'] = fre_json($config['behaviors']);
+    $attrsForm['data-behavior-when'] = FormRenderer::json($config['behaviors']);
 }
 if (!empty($config['submit_handler'])) {
     // O runtime procura `data-<plugin>-when`; o plugin chama-se `submit-handler`.
-    $attrsForm['data-submit-handler-when'] = fre_json($config['submit_handler']);
+    $attrsForm['data-submit-handler-when'] = FormRenderer::json($config['submit_handler']);
 }
 ?>
-<form<?= fre_attrs($attrsForm) ?>>
+<form<?= FormRenderer::attrs($attrsForm) ?>>
 
 <?php /* ── parâmetros do formulário ──────────────────────────────────────────
        Viram hidden com o prefixo `__form_param_`. Nas condições você os cita
@@ -40,20 +43,20 @@ if (!empty($config['submit_handler'])) {
        a versão com os dois underscores. Mudar um deles reavalia TODAS as
        regras do formulário, não só as dependentes.                         */ ?>
 <?php foreach (($config['params'] ?? []) as $chave => $valor): ?>
-  <input type="hidden" name="__form_param_<?= fre_e($chave) ?>" value="<?= fre_e($valor) ?>">
+  <input type="hidden" name="__form_param_<?= FormRenderer::e($chave) ?>" value="<?= FormRenderer::e($valor) ?>">
 <?php endforeach; ?>
 
 <?php /* ── configuração do wizard ───────────────────────────────────────────
        O plugin `step` lê o VALUE destes campos (não o atributo).           */ ?>
 <?php if ($temSteps): ?>
-  <input type="hidden" data-step-config value="<?= fre_e(fre_json($config['step_config'])) ?>">
-  <input type="hidden" data-step-rules  value="<?= fre_e(fre_json($config['step_config']['skip'] ?? [])) ?>">
+  <input type="hidden" data-step-config value="<?= FormRenderer::e(FormRenderer::json($config['step_config'])) ?>">
+  <input type="hidden" data-step-rules  value="<?= FormRenderer::e(FormRenderer::json($config['step_config']['skip'] ?? [])) ?>">
 <?php endif; ?>
 
 <?php /* ── configuração da liberação sequencial ─────────────────────────────
        Aqui é o contrário: o plugin `sequence` lê o ATRIBUTO.               */ ?>
 <?php if (!empty($config['sequence_config'])): ?>
-  <input type="hidden" data-sequence-config="<?= fre_e(fre_json($config['sequence_config'])) ?>">
+  <input type="hidden" data-sequence-config="<?= FormRenderer::e(FormRenderer::json($config['sequence_config'])) ?>">
 <?php endif; ?>
 
 <?= $config['before_sections'] ?? '' ?>
@@ -75,9 +78,9 @@ if (!empty($config['submit_handler'])) {
         $attrsSecao['id'] = $section['id'];
     }
   ?>
-  <section<?= fre_attrs($attrsSecao) ?>>
+  <section<?= FormRenderer::attrs($attrsSecao) ?>>
     <?php if (!empty($section['title'])): ?>
-      <h3 class="ilu-form-section__title"><?= fre_e($section['title']) ?></h3>
+      <h3 class="ilu-form-section__title"><?= FormRenderer::e($section['title']) ?></h3>
     <?php endif; ?>
     <?php if (!empty($section['description'])): ?>
       <p class="hint" style="margin-bottom:14px"><?= $section['description'] ?></p>
@@ -85,7 +88,7 @@ if (!empty($config['submit_handler'])) {
 
     <div class="ilu-form-compact__grid">
       <?php foreach (($section['fields'] ?? []) as $field): ?>
-        <?= fre_render_field($field) ?>
+        <?= FormRenderer::field($field) ?>
       <?php endforeach; ?>
     </div>
   </section>
@@ -116,10 +119,10 @@ if (!empty($config['submit_handler'])) {
             'onclick' => $button['onclick'] ?? null,
         ];
         if ($regrasAcao !== []) {
-            $attrsBotao['data-action-when'] = fre_json($regrasAcao);
+            $attrsBotao['data-action-when'] = FormRenderer::json($regrasAcao);
         }
         if (!empty($button['confirm_submit'])) {
-            $attrsBotao['data-confirm-submit-when'] = fre_json($button['confirm_submit']);
+            $attrsBotao['data-confirm-submit-when'] = FormRenderer::json($button['confirm_submit']);
         }
         if (!empty($button['step_role'])) {
             // Bring-your-own-nav: o plugin `step` ADOTA controles já existentes
@@ -129,7 +132,7 @@ if (!empty($config['submit_handler'])) {
             $attrsBotao['data-step-for'] = $formName;
         }
       ?>
-      <button<?= fre_attrs($attrsBotao) ?>><?= fre_e($button['label'] ?? 'Enviar') ?></button>
+      <button<?= FormRenderer::attrs($attrsBotao) ?>><?= FormRenderer::e($button['label'] ?? 'Enviar') ?></button>
     <?php endforeach; ?>
   </div>
 <?php endif; ?>
