@@ -1,0 +1,62 @@
+name: Documentação
+
+# Publica a documentação executável no GitHub Pages a cada push na main.
+#
+# O Pages serve arquivos e não executa PHP, então o job roda o exportador
+# (tools/exportar-estatico.php), que renderiza as 24 páginas para HTML e troca o
+# api.php pelo substituto em JavaScript. Ver tools/exportar-estatico.php.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # permite publicar à mão pela aba Actions
+
+# Uma publicação por vez; se chegar um push novo, o anterior é cancelado.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci || npm install
+
+      # Se a suíte quebrar, não publica. Documentação errada é pior que
+      # documentação velha.
+      - name: Testes
+        run: npm test
+
+      - name: Exportar
+        run: php tools/exportar-estatico.php dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -62,11 +62,21 @@ então qualquer backend serve: Django, Rails, ASP.NET, JSP ou string concatenada
 
 ## Estado atual do repositório
 
-**Extração inicial, verbatim.** Os arquivos foram copiados sem modificação do CRM
-onde a engine nasceu (Ilumimais/Conecta Corretora), de propósito: manter os nomes e
-o conteúdo idênticos permite `diff` contra a origem enquanto a extração amadurece.
+**Extraída de um CRM em produção, e já divergindo dele.** A primeira versão deste
+repositório era cópia literal dos arquivos do CRM onde a engine nasceu
+(Ilumimais/Conecta Corretora), para permitir `diff` contra a origem. Essa
+propriedade acabou: corrigir as falhas silenciosas, extrair o tema, fechar a
+fronteira do host e traduzir as mensagens são todas mudanças de comportamento, e
+`src/` foi reescrito em 24 arquivos.
 
-O que isso significa na prática, e que ainda **não** está resolvido:
+A rede de segurança passou a ser a suíte de testes, não a comparação com a
+origem. `tests/paridade-php.php` ainda compara o interpretador com o trait de
+lá, e registra as **divergências deliberadas** como asserções: cada uma afirma
+que a origem produz o resultado antigo e que nós produzimos o novo. É o que
+mantém distinguíveis "consertei" e "quebrei". Comparação literal só sobrevive em
+`reference/php/`, que segue intocado.
+
+O que ainda **não** está resolvido:
 
 - **Não há build, nem pacote npm, nem pacote Composer.** São scripts carregados
   por `<script src>` e uma classe PHP para `require`.
@@ -104,13 +114,19 @@ mudança em `FormRenderer` que altere a saída aparece ali, em 54 formulários d
 formatos diferentes.
 
 ```bash
-php -S localhost:8000 -t .
+npm run docs          # php -S localhost:8000 -t .
 # http://localhost:8000/examples/
 ```
 
 PHP 8.0+, sem Composer e sem banco: o backend dos exemplos é um único `api.php`
 com arrays em memória, e é ele que atende as demonstrações de `fetch_when`,
 `populate_when`, `remote_validate_when` e da política de senha.
+
+Ela também é publicável no GitHub Pages: `npm run docs:build` exporta tudo para
+HTML estático, e o workflow em `.github/workflows/pages.yml` faz isso a cada push.
+Na versão publicada o backend é simulado em JavaScript, porque o Pages não executa
+PHP; `tests/mock-vs-api.js` garante que as respostas não divirjam. Ver
+[examples/README.md](examples/README.md).
 
 Comece pelo [índice](examples/), ou direto no
 [começo rápido](examples/?p=basico). A

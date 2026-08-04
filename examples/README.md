@@ -36,6 +36,43 @@ php -S localhost:8000 -t .
 PHP 8.0+. Não há dependências, nem Composer, nem banco: o backend dos exemplos
 é um único `api.php` com arrays em memória.
 
+## Publicando no GitHub Pages
+
+A documentação é PHP, e o Pages serve só arquivos estáticos. O caminho é
+exportar e deixar o GitHub publicar sozinho a cada push.
+
+```bash
+npm run docs:build     # gera dist/ com as 24 páginas em HTML
+```
+
+O exportador (`tools/exportar-estatico.php`) roda o front controller uma vez por
+página, grava o HTML e faz três ajustes:
+
+| | |
+|---|---|
+| `?p=slug` vira `slug.html` | hospedagem estática não roteia query string |
+| `../src/` vira `src/` | o runtime é copiado para dentro da raiz publicada |
+| `api.php` vira `assets/mock-api.js` | o Pages não executa PHP |
+
+O terceiro é o que custa: **na versão publicada o backend é simulado**. As
+respostas são idênticas, e `tests/mock-vs-api.js` compara as duas rota por rota
+para não divergirem em silêncio; mas quem clona o repositório e roda
+`npm run docs` vê o `api.php` de verdade, e é ali que um contrato errado
+aparece. A página publicada diz isso no topo.
+
+### Ligando (uma vez só)
+
+O workflow já está em `.github/workflows/pages.yml`. Falta o que só se faz pela
+interface:
+
+1. **Settings → Pages → Source: GitHub Actions.**
+2. Um push na `main`. A aba **Actions** mostra o progresso.
+
+O endereço sai em `https://SEU-USUARIO.github.io/FormRuleEngine/`.
+
+O workflow roda `npm test` antes de exportar e **não publica se a suíte quebrar**:
+documentação errada é pior que documentação velha.
+
 ## O que tem aqui
 
 | | Página | Assunto |

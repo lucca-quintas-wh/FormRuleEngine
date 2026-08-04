@@ -24,7 +24,10 @@ if ($slug !== null) {
     $view = __DIR__ . '/views/' . basename((string) $slug) . '.phtml';
     if (isset($paginas[$slug]) && is_file($view)) {
         include $view;
-        exit;
+        // `return` em vez de `exit`: como script principal (php -S) encerra
+        // igual, e como include (o exportador estático) devolve o controle em
+        // vez de derrubar o processo inteiro.
+        return;
     }
     http_response_code(404);
 }
